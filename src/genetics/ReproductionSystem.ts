@@ -6,46 +6,9 @@ import { MutationEngine } from './MutationEngine';
 
 export class ReproductionSystem {
   private mutationEngine: MutationEngine;
-  private lastReproductionTime = 0;
 
   constructor() {
     this.mutationEngine = new MutationEngine();
-  }
-
-  // Check if reproduction requirements are met
-  canReproduce(
-    genome: Genome,
-    compounds: CompoundStorage,
-    currentTime: number
-  ): { canReproduce: boolean; reason?: string } {
-    // ATP threshold check (70% of max)
-    const atpPercent = (genome.traits.atp / genome.traits.maxATP) * 100;
-    if (atpPercent < 70) {
-      return { canReproduce: false, reason: 'ATP below 70%' };
-    }
-
-    // Compound reserve check
-    if (
-      compounds.glucose < 50 ||
-      compounds.aminoAcids < 30 ||
-      compounds.phosphates < 20
-    ) {
-      return {
-        canReproduce: false,
-        reason: `Insufficient compounds (need: 50G, 30A, 20P)`,
-      };
-    }
-
-    // Maturity timer check (60 seconds since last reproduction)
-    const timeSinceLastReproduction = (currentTime - this.lastReproductionTime) / 1000;
-    if (timeSinceLastReproduction < 60) {
-      return {
-        canReproduce: false,
-        reason: `Need ${Math.ceil(60 - timeSinceLastReproduction)}s more maturity`,
-      };
-    }
-
-    return { canReproduce: true };
   }
 
   // Perform reproduction (create offspring genome)
@@ -82,9 +45,6 @@ export class ReproductionSystem {
       aminoAcids: 0,
       phosphates: 0,
     };
-
-    // Update last reproduction time
-    this.lastReproductionTime = Date.now();
 
     return offspring;
   }

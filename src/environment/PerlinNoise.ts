@@ -17,7 +17,9 @@ export class PerlinNoise {
     let random = this.seededRandom(seed);
     for (let i = 255; i > 0; i--) {
       const j = Math.floor(random() * (i + 1));
-      [p[i], p[j]] = [p[j], p[i]];
+      const temp = p[i]!;
+      p[i] = p[j]!;
+      p[j] = temp;
     }
 
     // Duplicate for wrapping
@@ -57,20 +59,20 @@ export class PerlinNoise {
     const u = this.fade(x);
     const v = this.fade(y);
 
-    const a = this.permutation[X] + Y;
-    const aa = this.permutation[a];
-    const ab = this.permutation[a + 1];
-    const b = this.permutation[X + 1] + Y;
-    const ba = this.permutation[b];
-    const bb = this.permutation[b + 1];
+    const a = this.permutation[X]! + Y;
+    const aa = this.permutation[a]!;
+    const ab = this.permutation[a + 1]!;
+    const b = this.permutation[X + 1]! + Y;
+    const ba = this.permutation[b]!;
+    const bb = this.permutation[b + 1]!;
 
     return this.lerp(
       v,
-      this.lerp(u, this.grad(this.permutation[aa], x, y), this.grad(this.permutation[ba], x - 1, y)),
+      this.lerp(u, this.grad(this.permutation[aa]!, x, y), this.grad(this.permutation[ba]!, x - 1, y)),
       this.lerp(
         u,
-        this.grad(this.permutation[ab], x, y - 1),
-        this.grad(this.permutation[bb], x - 1, y - 1)
+        this.grad(this.permutation[ab]!, x, y - 1),
+        this.grad(this.permutation[bb]!, x - 1, y - 1)
       )
     );
   }

@@ -4,7 +4,7 @@ import { GameLoop } from './core/GameLoop';
 
 // Initialize and start the game
 async function main() {
-  console.log('🧬 Welcome to EvoLab - Evolution Simulator');
+  // console.log('🧬 Welcome to EvoLab - Evolution Simulator');
 
   const game = new GameLoop();
 

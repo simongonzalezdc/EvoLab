@@ -17,6 +17,7 @@ export class Cell {
   public survivalTime = 0;
   public birthTime: number;
   public lastReproductionTime = 0;
+  private deathCallback: ((cause: 'atp' | 'health') => void) | null = null;
 
   constructor(
     id: string,
@@ -88,11 +89,11 @@ export class Cell {
     const timeSinceLastReproduction = (Date.now() - this.lastReproductionTime) / 1000;
 
     return (
-      atpPercent >= 70 &&
-      this.compounds.glucose >= 50 &&
-      this.compounds.aminoAcids >= 30 &&
-      this.compounds.phosphates >= 20 &&
-      timeSinceLastReproduction >= 60
+      atpPercent >= Config.REPRODUCTION_ATP_THRESHOLD &&
+      this.compounds.glucose >= Config.REPRODUCTION_GLUCOSE_REQUIRED &&
+      this.compounds.aminoAcids >= Config.REPRODUCTION_AMINO_ACIDS_REQUIRED &&
+      this.compounds.phosphates >= Config.REPRODUCTION_PHOSPHATES_REQUIRED &&
+      timeSinceLastReproduction >= Config.REPRODUCTION_COOLDOWN_SECONDS
     );
   }
 
@@ -153,10 +154,16 @@ export class Cell {
 
   // Handle cell death
   private onDeath(): void {
-    if (this.isPlayer) {
-      console.log('Player cell died! ATP depleted.');
-      // TODO: Show death screen, offer restart
+    if (this.isPlayer && this.deathCallback) {
+      // Determine cause of death: if health is 0, it's health damage; otherwise ATP depletion
+      const cause: 'atp' | 'health' = this.traits.health <= 0 ? 'health' : 'atp';
+      this.deathCallback(cause);
     }
+  }
+
+  // Set callback for when cell dies (used for player death screen)
+  setDeathCallback(callback: (cause: 'atp' | 'health') => void): void {
+    this.deathCallback = callback;
   }
 
   // Get distance to another position

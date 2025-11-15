@@ -42,7 +42,6 @@ export class PixiApp {
     this.worldContainer.y = Config.CANVAS_HEIGHT / 2;
 
     this.isInitialized = true;
-    console.log('PixiJS initialized');
   }
 
   // Add biome layer underneath entities

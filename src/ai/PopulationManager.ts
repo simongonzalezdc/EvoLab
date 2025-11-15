@@ -1,12 +1,13 @@
 // Population manager for AI species
 
 import { Cell } from '../entities/Cell';
+import { Resource } from '../entities/Resource';
 import { Genome } from '../genetics/Genome';
 import { PixiApp } from '../rendering/PixiApp';
 import { HerbivoreAI } from './HerbivoreAI';
 import { CarnivoreAI } from './CarnivoreAI';
 import { OmnivoreAI } from './OmnivoreAI';
-import type { AIBehavior, BehaviorType } from './AIBehavior';
+import { BehaviorType, type AIBehavior } from './AIBehavior';
 import { Config } from '../core/Config';
 
 interface Species {
@@ -54,36 +55,36 @@ export class PopulationManager {
   initializeDefaultSpecies(): void {
     // Herbivore species - small, fast, timid
     const herbivoreGenome = Genome.createDefault();
-    herbivoreGenome.traits.size = 4;
+    herbivoreGenome.traits.size = Config.HERBIVORE_SIZE;
     herbivoreGenome.traits.speed = 7;
     herbivoreGenome.traits.aggression = 2;
     herbivoreGenome.traits.fearResponse = 8;
-    herbivoreGenome.traits.color = 0x66bb6a; // Green
-    this.registerSpecies('Herbivore', 'herbivore', herbivoreGenome, 0x66bb6a, 15);
+    herbivoreGenome.traits.color = Config.HERBIVORE_COLOR;
+    this.registerSpecies('Herbivore', BehaviorType.HERBIVORE, herbivoreGenome, Config.HERBIVORE_COLOR, Config.HERBIVORE_POPULATION);
 
     // Carnivore species - medium, aggressive
     const carnivoreGenome = Genome.createDefault();
-    carnivoreGenome.traits.size = 6;
+    carnivoreGenome.traits.size = Config.CARNIVORE_SIZE;
     carnivoreGenome.traits.speed = 6;
     carnivoreGenome.traits.aggression = 8;
     carnivoreGenome.traits.fearResponse = 3;
     carnivoreGenome.traits.toxinStrength = 3;
-    carnivoreGenome.traits.color = 0xef5350; // Red
-    this.registerSpecies('Carnivore', 'carnivore', carnivoreGenome, 0xef5350, 8);
+    carnivoreGenome.traits.color = Config.CARNIVORE_COLOR;
+    this.registerSpecies('Carnivore', BehaviorType.CARNIVORE, carnivoreGenome, Config.CARNIVORE_COLOR, Config.CARNIVORE_POPULATION);
 
     // Omnivore species - balanced
     const omnivoreGenome = Genome.createDefault();
-    omnivoreGenome.traits.size = 5;
+    omnivoreGenome.traits.size = Config.OMNIVORE_SIZE;
     omnivoreGenome.traits.speed = 6;
     omnivoreGenome.traits.aggression = 5;
     omnivoreGenome.traits.fearResponse = 5;
     omnivoreGenome.traits.intelligence = 6;
-    omnivoreGenome.traits.color = 0xffa726; // Orange
-    this.registerSpecies('Omnivore', 'omnivore', omnivoreGenome, 0xffa726, 10);
+    omnivoreGenome.traits.color = Config.OMNIVORE_COLOR;
+    this.registerSpecies('Omnivore', BehaviorType.OMNIVORE, omnivoreGenome, Config.OMNIVORE_COLOR, Config.OMNIVORE_POPULATION);
   }
 
   // Update all AI cells
-  update(deltaTime: number, allCells: Cell[], resources: any[]): void {
+  update(deltaTime: number, allCells: Cell[], resources: Resource[]): void {
     this.spawnCooldown -= deltaTime;
 
     // Spawn new cells if below max population
@@ -167,8 +168,10 @@ export class PopulationManager {
       const index = species.population.findIndex(c => c.id === cellId);
       if (index !== -1) {
         const cell = species.population[index];
-        this.renderer.removeFromWorld(cell.sprite);
-        cell.dispose();
+        if (cell) {
+          this.renderer.removeFromWorld(cell.sprite);
+          cell.dispose();
+        }
         species.population.splice(index, 1);
         this.aiBehaviors.delete(cellId);
         break;

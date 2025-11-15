@@ -167,6 +167,30 @@ export class HistoryTracker {
     }, null, 2);
   }
 
+  importFromJSON(jsonString: string): void {
+    try {
+      const data = JSON.parse(jsonString);
+
+      this.currentGeneration = data.currentGeneration || 0;
+      this.generationHistory = data.generationHistory || [];
+      this.populationData = data.populationData || [];
+
+      // Restore lineage tree from array of entries
+      this.lineageTree.clear();
+      if (data.lineageTree && Array.isArray(data.lineageTree)) {
+        for (const [id, node] of data.lineageTree) {
+          this.lineageTree.set(id, node);
+        }
+      }
+
+      this.birthsThisGen = 0;
+      this.deathsThisGen = 0;
+    } catch (error) {
+      console.error('Failed to import history data:', error);
+      throw error;
+    }
+  }
+
   exportToCSV(): string {
     let csv = 'Generation,Timestamp,Herbivores,Carnivores,Omnivores,Player,Total,Births,Deaths\n';
 

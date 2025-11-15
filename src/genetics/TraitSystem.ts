@@ -22,10 +22,6 @@ export class TraitSystem {
     // Armor reduces speed
     modified.speed *= 1 - modified.armor * 0.05; // Each armor point = -5% speed
 
-    // High metabolism = fast energy but high cost
-    const atpGeneration = modified.metabolismRate * 2;
-    const energyDrain = modified.metabolismRate * 1.5;
-
     // Intelligence improves all senses
     modified.visionRange *= 1 + modified.intelligence * 0.05;
     modified.chemotaxis *= 1 + modified.intelligence * 0.05;

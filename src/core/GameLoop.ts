@@ -32,7 +32,7 @@ export class GameLoop {
   private animationFrameId: number | null = null;
   private pendingModifications: Partial<Traits> | null = null;
   private lastAutoSave = 0;
-  private autoSaveInterval = 5 * 60 * 1000; // 5 minutes default
+  private autoSaveInterval = Config.AUTO_SAVE_INTERVAL_MINUTES * 60 * 1000;
 
   constructor() {
     this.renderer = new PixiApp();
@@ -44,7 +44,7 @@ export class GameLoop {
     this.uiController = new UIController(this.timeControl, this.saveSystem);
     this.biomeGenerator = new BiomeGenerator(Config.LAKE_WIDTH, Config.LAKE_HEIGHT);
     this.biomeRenderer = new BiomeRenderer(this.biomeGenerator);
-    this.dayNightCycle = new DayNightCycle(12, 10); // Start at noon, 10x speed
+    this.dayNightCycle = new DayNightCycle(Config.DAY_NIGHT_START_TIME, Config.DAY_NIGHT_SPEED_MULTIPLIER);
 
     // Setup UI callbacks
     this.setupUICallbacks();
@@ -86,10 +86,14 @@ export class GameLoop {
     this.uiController.setExportHistoryCallback(() => {
       this.exportHistory();
     });
+
+    this.uiController.setRestartCallback(() => {
+      this.resetGame();
+    });
   }
 
   async initialize(): Promise<void> {
-    console.log('Initializing EvoLab...');
+    // console.log('Initializing EvoLab...');
 
     // Initialize renderer
     await this.renderer.initialize();
@@ -99,6 +103,21 @@ export class GameLoop {
 
     // Create player cell
     this.entityManager.createPlayerCell();
+
+    // Set up death callback for player
+    if (this.entityManager.playerCell) {
+      this.entityManager.playerCell.setDeathCallback((cause) => {
+        const player = this.entityManager.playerCell;
+        if (player) {
+          this.uiController.showDeathScreen(
+            player.genome.lineage.generation,
+            player.survivalTime,
+            this.entityManager.glucoseCollected,
+            cause
+          );
+        }
+      });
+    }
 
     // Record birth in history tracker
     if (this.entityManager.playerCell) {
@@ -122,7 +141,7 @@ export class GameLoop {
       }, 1000);
     }
 
-    console.log('Game initialized successfully!');
+    // console.log('Game initialized successfully!');
   }
 
   // Start the game loop
@@ -132,8 +151,6 @@ export class GameLoop {
     this.isRunning = true;
     this.lastTime = performance.now();
     this.loop(this.lastTime);
-
-    console.log('Game loop started');
   }
 
   // Main game loop
@@ -316,7 +333,7 @@ export class GameLoop {
     if (!player || !player.canReproduce()) return;
 
     // Calculate DNA points
-    const dnaPoints = player.survivalTime * 0.1 + this.entityManager.glucoseCollected * 0.05;
+    const dnaPoints = player.survivalTime * Config.DNA_FROM_SURVIVAL_TIME + this.entityManager.glucoseCollected * Config.DNA_FROM_GLUCOSE;
     player.genome.dnaPoints += dnaPoints;
 
     // Show generation report
@@ -345,7 +362,6 @@ export class GameLoop {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
     }
-    console.log('Game loop stopped');
   }
 
   // Reset game to initial state
@@ -354,9 +370,25 @@ export class GameLoop {
     this.entityManager.dispose();
     this.historyTracker.reset();
     this.timeControl.reset();
-    this.dayNightCycle = new DayNightCycle(12, 10);
+    this.dayNightCycle = new DayNightCycle(Config.DAY_NIGHT_START_TIME, Config.DAY_NIGHT_SPEED_MULTIPLIER);
     this.entityManager = new EntityManager(this.renderer);
     this.entityManager.createPlayerCell();
+
+    // Set up death callback for new player
+    if (this.entityManager.playerCell) {
+      this.entityManager.playerCell.setDeathCallback((cause) => {
+        const player = this.entityManager.playerCell;
+        if (player) {
+          this.uiController.showDeathScreen(
+            player.genome.lineage.generation,
+            player.survivalTime,
+            this.entityManager.glucoseCollected,
+            cause
+          );
+        }
+      });
+    }
+
     this.entityManager.spawnResources();
 
     // Record new player birth
@@ -370,7 +402,6 @@ export class GameLoop {
     }
 
     this.start();
-    console.log('Game reset');
   }
 
   // Load a saved simulation
@@ -393,17 +424,28 @@ export class GameLoop {
         this.entityManager.playerCell.traits = playerGenome.traits;
         this.entityManager.playerCell.position = sim.playerData.position;
         this.entityManager.playerCell.traits.atp = sim.playerData.atp;
+
+        // Set up death callback
+        this.entityManager.playerCell.setDeathCallback((cause) => {
+          const player = this.entityManager.playerCell;
+          if (player) {
+            this.uiController.showDeathScreen(
+              player.genome.lineage.generation,
+              player.survivalTime,
+              this.entityManager.glucoseCollected,
+              cause
+            );
+          }
+        });
       }
 
       // Restore history
-      const historyData = JSON.parse(sim.historyData);
-      // Note: Would need to fully deserialize history tracker here
+      this.historyTracker.importFromJSON(sim.historyData);
 
       // Restore settings
       this.applySettings(sim.settings);
 
       this.start();
-      console.log('Simulation loaded');
     } catch (error) {
       console.error('Failed to load simulation:', error);
       alert('Failed to load simulation');
@@ -415,7 +457,6 @@ export class GameLoop {
     if (this.entityManager.playerCell) {
       this.entityManager.playerCell.genome = creature.genome;
       this.entityManager.playerCell.traits = creature.genome.traits;
-      console.log('Creature loaded:', creature.name);
     }
   }
 
@@ -423,7 +464,6 @@ export class GameLoop {
   private applySettings(settings: GameSettings): void {
     this.autoSaveInterval = settings.autoSaveInterval * 60 * 1000;
     // Apply other settings as needed
-    console.log('Settings applied');
   }
 
   // Export evolution history to CSV
@@ -436,7 +476,6 @@ export class GameLoop {
     link.download = `evolab-history-${Date.now()}.csv`;
     link.click();
     URL.revokeObjectURL(url);
-    console.log('History exported');
   }
 
   // Auto-save current state
@@ -463,8 +502,6 @@ export class GameLoop {
         this.historyTracker.getCurrentGeneration(),
         this.saveSystem.getDefaultSettings()
       );
-
-      console.log('Auto-saved');
     } catch (error) {
       console.error('Auto-save failed:', error);
     }

@@ -9,6 +9,7 @@ import { ReproductionSystem } from '../genetics/ReproductionSystem';
 import { TraitSystem } from '../genetics/TraitSystem';
 import { PopulationManager } from '../ai/PopulationManager';
 import { CombatSystem } from './CombatSystem';
+import type { Traits } from '../types/entities';
 
 export class EntityManager {
   private cells: Map<string, Cell> = new Map();
@@ -73,8 +74,6 @@ export class EntityManager {
       const resource = new Resource(`glucose-${i}`, x, y, 'glucose', sprite);
       this.resources.set(resource.id, resource);
     }
-
-    console.log(`Spawned ${Config.GLUCOSE_COUNT} glucose particles`);
   }
 
   // Update all entities
@@ -130,7 +129,7 @@ export class EntityManager {
   }
 
   // Handle player reproduction
-  reproducePlayer(modifications: Partial<typeof this.playerCell.traits> = {}): Cell | null {
+  reproducePlayer(modifications: Partial<Traits> = {}): Cell | null {
     if (!this.playerCell) return null;
 
     // Calculate DNA points earned

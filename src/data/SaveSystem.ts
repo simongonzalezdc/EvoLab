@@ -71,65 +71,113 @@ export class SaveSystem {
     generation: number,
     settings: GameSettings
   ): Promise<number> {
-    const save: SavedSimulation = {
-      name,
-      timestamp: Date.now(),
-      generation,
-      playerData,
-      populationData,
-      historyData,
-      settings,
-    };
+    try {
+      const save: SavedSimulation = {
+        name,
+        timestamp: Date.now(),
+        generation,
+        playerData,
+        populationData,
+        historyData,
+        settings,
+      };
 
-    const id = await this.db.simulations.add(save);
-    console.log(`Simulation saved with ID: ${id}`);
-    return id;
+      const id = await this.db.simulations.add(save);
+      return id;
+    } catch (error) {
+      console.error('Failed to save simulation:', error);
+      throw new Error(`Failed to save simulation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async loadSimulation(id: number): Promise<SavedSimulation | undefined> {
-    return await this.db.simulations.get(id);
+    try {
+      return await this.db.simulations.get(id);
+    } catch (error) {
+      console.error('Failed to load simulation:', error);
+      throw new Error(`Failed to load simulation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async getAllSimulations(): Promise<SavedSimulation[]> {
-    return await this.db.simulations.orderBy('timestamp').reverse().toArray();
+    try {
+      return await this.db.simulations.orderBy('timestamp').reverse().toArray();
+    } catch (error) {
+      console.error('Failed to get simulations:', error);
+      throw new Error(`Failed to get simulations: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async deleteSimulation(id: number): Promise<void> {
-    await this.db.simulations.delete(id);
+    try {
+      await this.db.simulations.delete(id);
+    } catch (error) {
+      console.error('Failed to delete simulation:', error);
+      throw new Error(`Failed to delete simulation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async saveCreature(name: string, genome: Genome, thumbnail?: string): Promise<number> {
-    const creature: SavedCreature = {
-      name,
-      timestamp: Date.now(),
-      genome,
-      thumbnail,
-    };
+    try {
+      const creature: SavedCreature = {
+        name,
+        timestamp: Date.now(),
+        genome,
+        thumbnail,
+      };
 
-    const id = await this.db.creatures.add(creature);
-    console.log(`Creature saved with ID: ${id}`);
-    return id;
+      const id = await this.db.creatures.add(creature);
+      return id;
+    } catch (error) {
+      console.error('Failed to save creature:', error);
+      throw new Error(`Failed to save creature: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async loadCreature(id: number): Promise<SavedCreature | undefined> {
-    return await this.db.creatures.get(id);
+    try {
+      return await this.db.creatures.get(id);
+    } catch (error) {
+      console.error('Failed to load creature:', error);
+      throw new Error(`Failed to load creature: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async getAllCreatures(): Promise<SavedCreature[]> {
-    return await this.db.creatures.orderBy('timestamp').reverse().toArray();
+    try {
+      return await this.db.creatures.orderBy('timestamp').reverse().toArray();
+    } catch (error) {
+      console.error('Failed to get creatures:', error);
+      throw new Error(`Failed to get creatures: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async deleteCreature(id: number): Promise<void> {
-    await this.db.creatures.delete(id);
+    try {
+      await this.db.creatures.delete(id);
+    } catch (error) {
+      console.error('Failed to delete creature:', error);
+      throw new Error(`Failed to delete creature: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async saveSettings(settings: GameSettings): Promise<void> {
-    await this.db.settings.put({ id: 1, data: settings });
+    try {
+      await this.db.settings.put({ id: 1, data: settings });
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      throw new Error(`Failed to save settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async loadSettings(): Promise<GameSettings | undefined> {
-    const result = await this.db.settings.get(1);
-    return result?.data;
+    try {
+      const result = await this.db.settings.get(1);
+      return result?.data;
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+      throw new Error(`Failed to load settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   getDefaultSettings(): GameSettings {

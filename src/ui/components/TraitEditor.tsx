@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import type { Traits } from '../../types/entities';
 import { TraitSystem } from '../../genetics/TraitSystem';
+import { Config } from '../../core/Config';
 
 interface TraitEditorProps {
   currentTraits: Traits;
@@ -50,7 +51,7 @@ export const TraitEditor: React.FC<TraitEditorProps> = ({
       if (value !== undefined) {
         const oldValue = currentTraits[key as keyof Traits] as number;
         const diff = Math.abs((value as number) - oldValue);
-        cost += diff * 2; // 2 DNA points per unit change
+        cost += diff * Config.DNA_COST_PER_TRAIT_CHANGE;
       }
     }
     return cost;

@@ -10,6 +10,7 @@ import { SettingsPanel } from './components/SettingsPanel';
 import { SaveLoadPanel } from './components/SaveLoadPanel';
 import { TutorialPanel } from './components/TutorialPanel';
 import { MainMenu } from './components/MainMenu';
+import { DeathScreen } from './components/DeathScreen';
 import type { Traits } from '../types/entities';
 import type { TimeControl } from '../core/TimeControl';
 import type { SaveSystem, GameSettings, SavedSimulation, SavedCreature } from '../data/SaveSystem';
@@ -22,6 +23,8 @@ interface UIState {
   showSettings: boolean;
   showSaveLoad: boolean;
   showTutorial: boolean;
+  showDeathScreen: boolean;
+  deathCause: 'atp' | 'health';
   currentTraits: Traits | null;
   generation: number;
   availableDNA: number;
@@ -40,6 +43,7 @@ export class UIController {
   private onApplyModifications: ((mods: Partial<Traits>) => void) | null = null;
   private onContinue: (() => void) | null = null;
   private onNewGame: (() => void) | null = null;
+  private onRestart: (() => void) | null = null;
   private onLoadSimulation: ((sim: SavedSimulation) => void) | null = null;
   private onLoadCreature: ((creature: SavedCreature) => void) | null = null;
   private onSettingsChange: ((settings: GameSettings) => void) | null = null;
@@ -67,6 +71,8 @@ export class UIController {
         showSettings: false,
         showSaveLoad: false,
         showTutorial: false,
+        showDeathScreen: false,
+        deathCause: 'atp',
         currentTraits: null,
         generation: 1,
         availableDNA: 0,
@@ -128,6 +134,11 @@ export class UIController {
 
       const handleExportHistory = () => {
         this.onExportHistory?.();
+      };
+
+      const handleRestart = () => {
+        setState(s => ({ ...s, showDeathScreen: false }));
+        this.onRestart?.();
       };
 
       return (
@@ -201,6 +212,17 @@ export class UIController {
           {/* Tutorial Modal */}
           {state.showTutorial && (
             <TutorialPanel onClose={() => setState(s => ({ ...s, showTutorial: false }))} />
+          )}
+
+          {/* Death Screen Modal */}
+          {state.showDeathScreen && (
+            <DeathScreen
+              generation={state.generation}
+              survivalTime={state.survivalTime}
+              resourcesCollected={state.resourcesCollected}
+              cause={state.deathCause}
+              onRestart={handleRestart}
+            />
           )}
         </>
       );
@@ -280,6 +302,21 @@ export class UIController {
 
   setExportHistoryCallback(callback: () => void) {
     this.onExportHistory = callback;
+  }
+
+  showDeathScreen(generation: number, survivalTime: number, resourcesCollected: number, cause: 'atp' | 'health') {
+    this.setState?.(s => ({
+      ...s,
+      showDeathScreen: true,
+      generation,
+      survivalTime,
+      resourcesCollected,
+      deathCause: cause,
+    }));
+  }
+
+  setRestartCallback(callback: () => void) {
+    this.onRestart = callback;
   }
 
   dispose() {

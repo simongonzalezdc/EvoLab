@@ -1,6 +1,7 @@
 // Combat system for predator-prey interactions
 
 import { Cell } from './Cell';
+import { Config } from '../core/Config';
 
 export class CombatSystem {
   private combatRange = 30; // Distance for combat
@@ -12,6 +13,8 @@ export class CombatSystem {
       for (let j = i + 1; j < cells.length; j++) {
         const cell1 = cells[i];
         const cell2 = cells[j];
+
+        if (!cell1 || !cell2) continue;
 
         // Skip player vs player (shouldn't happen)
         if (cell1.isPlayer && cell2.isPlayer) continue;
@@ -35,12 +38,12 @@ export class CombatSystem {
 
     // Calculate damage based on size, toxin strength, and armor
     const baseDamage = aggressor.traits.size * this.damageMultiplier;
-    const toxinDamage = aggressor.traits.toxinStrength * 0.5;
+    const toxinDamage = aggressor.traits.toxinStrength * Config.TOXIN_DAMAGE_MULTIPLIER;
     const totalDamage = baseDamage + toxinDamage;
 
     // Apply armor reduction
-    const armorReduction = defender.traits.armor * 0.1; // 10% per armor point
-    const finalDamage = Math.max(1, totalDamage * (1 - armorReduction));
+    const armorReduction = defender.traits.armor * Config.ARMOR_REDUCTION_PER_POINT;
+    const finalDamage = Math.max(Config.MINIMUM_DAMAGE, totalDamage * (1 - armorReduction));
 
     // Apply damage
     defender.traits.health -= finalDamage;
@@ -51,20 +54,20 @@ export class CombatSystem {
       defender.traits.atp = 0;
 
       // Aggressor gains energy from kill
-      const energyGain = defender.traits.size * 10;
+      const energyGain = defender.traits.size * Config.ENERGY_GAIN_FROM_KILL_MULTIPLIER;
       aggressor.restoreATP(energyGain);
     }
 
     // Aggressor loses some ATP from attacking
-    aggressor.traits.atp -= finalDamage * 0.2;
+    aggressor.traits.atp -= finalDamage * Config.ATP_COST_OF_ATTACKING_MULTIPLIER;
   }
 
   // Calculate combat power for AI decision making
   calculateCombatPower(cell: Cell): number {
     return (
-      cell.traits.size * 2 +
-      cell.traits.armor * 1.5 +
-      cell.traits.toxinStrength +
+      cell.traits.size * Config.COMBAT_POWER_SIZE_MULTIPLIER +
+      cell.traits.armor * Config.COMBAT_POWER_ARMOR_MULTIPLIER +
+      cell.traits.toxinStrength * Config.COMBAT_POWER_TOXIN_MULTIPLIER +
       cell.traits.aggression * 0.5
     );
   }
