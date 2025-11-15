@@ -9,6 +9,7 @@ import { CarnivoreAI } from './CarnivoreAI';
 import { OmnivoreAI } from './OmnivoreAI';
 import { BehaviorType, type AIBehavior } from './AIBehavior';
 import { Config } from '../core/Config';
+import { AdvancedAISystem } from './AdvancedAI';
 
 interface Species {
   name: string;
@@ -26,11 +27,13 @@ export class PopulationManager {
   private spawnCooldown = 0;
   private lakeWidth: number;
   private lakeHeight: number;
+  public advancedAI: AdvancedAISystem;
 
   constructor(renderer: PixiApp, lakeWidth: number, lakeHeight: number) {
     this.renderer = renderer;
     this.lakeWidth = lakeWidth;
     this.lakeHeight = lakeHeight;
+    this.advancedAI = new AdvancedAISystem();
   }
 
   // Register a new species
@@ -93,6 +96,9 @@ export class PopulationManager {
       this.trySpawnCells();
     }
 
+    // Update advanced AI systems (pack behavior, territories, learning)
+    this.advancedAI.update(allCells, deltaTime);
+
     // Update AI behaviors
     for (const species of this.species.values()) {
       for (const cell of species.population) {
@@ -107,6 +113,10 @@ export class PopulationManager {
         }
       }
     }
+
+    // Cleanup advanced AI data for dead cells
+    const aliveCellIds = new Set(allCells.map(c => c.id));
+    this.advancedAI.cleanup(aliveCellIds);
   }
 
   // Try to spawn cells for species below max population
@@ -149,7 +159,9 @@ export class PopulationManager {
         behavior = new HerbivoreAI(cell);
         break;
       case 'carnivore':
-        behavior = new CarnivoreAI(cell);
+        const carnivoreAI = new CarnivoreAI(cell);
+        carnivoreAI.setAdvancedAI(this.advancedAI); // Inject advanced AI for pack behavior
+        behavior = carnivoreAI;
         break;
       case 'omnivore':
         behavior = new OmnivoreAI(cell);

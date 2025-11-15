@@ -389,7 +389,7 @@ export class GameLoop {
       player.traits.armor,
       player.traits.size,
       player.traits.intelligence,
-      player.traits.metabolism,
+      player.traits.metabolismRate,
     ].filter(t => t >= 10).length;
     this.achievementSystem.trackProgress('perfect_specimen', maxTraitCount);
 
@@ -453,7 +453,7 @@ export class GameLoop {
           // Low oxygen reduces ATP regeneration
           // Reduces effectiveness of metabolism
           const oxygenPenalty = hazard.intensity * 0.5;
-          const atpDrain = oxygenPenalty * player.traits.metabolism * deltaTime;
+          const atpDrain = oxygenPenalty * player.traits.metabolismRate * deltaTime;
           player.traits.atp = Math.max(0, player.traits.atp - atpDrain);
           break;
 

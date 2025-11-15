@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import type { Achievement, AchievementCategory, Challenge } from '../../achievements/AchievementSystem';
+import type { Achievement, Challenge } from '../../achievements/AchievementSystem';
+import { AchievementCategory } from '../../achievements/AchievementSystem';
 
 interface AchievementsPanelProps {
   achievements: Achievement[];
@@ -17,12 +18,12 @@ export const AchievementsPanel: React.FC<AchievementsPanelProps> = ({
 
   const categories: (AchievementCategory | 'all')[] = [
     'all',
-    'survival',
-    'evolution',
-    'combat',
-    'exploration',
-    'traits',
-    'challenges',
+    AchievementCategory.SURVIVAL,
+    AchievementCategory.EVOLUTION,
+    AchievementCategory.COMBAT,
+    AchievementCategory.EXPLORATION,
+    AchievementCategory.TRAITS,
+    AchievementCategory.CHALLENGES,
   ];
 
   const getRarityColor = (rarity: string): string => {
