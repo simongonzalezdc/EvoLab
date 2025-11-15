@@ -18,6 +18,7 @@ import { Genome } from '../genetics/Genome';
 import { MusicManager } from '../audio/MusicManager';
 import { AchievementSystem } from '../achievements/AchievementSystem';
 import type { Achievement } from '../achievements/AchievementSystem';
+import { EvolutionSystemsManager } from './EvolutionSystemsManager';
 
 export class GameLoop {
   private renderer: PixiApp;
@@ -32,6 +33,7 @@ export class GameLoop {
   private dayNightCycle: DayNightCycle;
   private musicManager: MusicManager;
   private achievementSystem: AchievementSystem;
+  private evolutionSystems: EvolutionSystemsManager;
   private lastTime = 0;
   private isRunning = false;
   private animationFrameId: number | null = null;
@@ -58,7 +60,18 @@ export class GameLoop {
     this.dayNightCycle = new DayNightCycle(Config.DAY_NIGHT_START_TIME, Config.DAY_NIGHT_SPEED_MULTIPLIER);
     this.musicManager = new MusicManager();
     this.achievementSystem = new AchievementSystem();
+    this.evolutionSystems = new EvolutionSystemsManager({
+      lakeWidth: Config.LAKE_WIDTH,
+      lakeHeight: Config.LAKE_HEIGHT,
+      enablePhysics: false, // Start disabled, can be toggled
+      enableSexualReproduction: false, // Start with asexual
+      enableSpeciation: false, // Start disabled
+    });
     this.currentSettings = this.saveSystem.getDefaultSettings();
+
+    // Initialize base species for speciation system
+    const baseGenome = Genome.createDefault();
+    this.evolutionSystems.initializeBaseSpecies(baseGenome, 10);
 
     // Setup achievement unlock callback
     this.achievementSystem.onAchievementUnlocked((achievement) => {
@@ -116,6 +129,29 @@ export class GameLoop {
     this.uiController.setAchievementsCallback(() => {
       this.showAchievementsPanel();
     });
+
+    // Evolution systems callbacks
+    this.uiController.setTogglePhysicsCallback(() => {
+      this.evolutionSystems.togglePhysics();
+    });
+
+    this.uiController.setToggleReproductionModeCallback(() => {
+      this.evolutionSystems.toggleSexualReproduction();
+    });
+
+    this.uiController.setToggleSpeciationCallback(() => {
+      this.evolutionSystems.toggleSpeciation();
+    });
+
+    this.uiController.setShowPhylogeneticTreeCallback(() => {
+      this.showPhylogeneticTree();
+    });
+  }
+
+  private showPhylogeneticTree(): void {
+    const tree = this.evolutionSystems.getPhylogeneticTree();
+    const species = this.evolutionSystems.getAllSpecies();
+    this.uiController.showPhylogeneticTree(tree, species);
   }
 
   private showAchievementsPanel(): void {
@@ -244,6 +280,10 @@ export class GameLoop {
     // Update all entities
     this.entityManager.update(deltaTime);
 
+    // Update evolution systems (physics, mating, speciation)
+    const allCells = this.entityManager.getAllCells();
+    this.evolutionSystems.update(deltaTime, allCells);
+
     // Update camera to follow player
     if (player) {
       this.renderer.updateCamera(player.position.x, player.position.y);
@@ -277,6 +317,15 @@ export class GameLoop {
         this.historyTracker.getCurrentGeneration(),
         this.historyTracker.getPopulationData(),
         this.historyTracker.getLineageTree()
+      );
+
+      // Update evolution control panel
+      this.uiController.updateEvolutionControls(
+        this.evolutionSystems.physicsEnabled,
+        this.evolutionSystems.sexualReproductionEnabled ? 'sexual' : 'asexual',
+        this.evolutionSystems.speciationEnabled,
+        this.evolutionSystems.getSpeciesCount(),
+        this.evolutionSystems.getMatingStats()
       );
     }
   }
@@ -792,5 +841,6 @@ export class GameLoop {
     this.renderer.dispose();
     this.inputHandler.dispose();
     this.musicManager.dispose();
+    this.evolutionSystems.dispose();
   }
 }
