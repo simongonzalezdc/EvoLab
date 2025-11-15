@@ -89,6 +89,12 @@
   - New Game, Load/Save, Settings, Tutorial
   - Export history, toggle stats display
   - Fixed position UI with clean modern design
+- 🎵 **Adaptive Procedural Music** - Dynamic soundtrack system
+  - 7 biome-specific soundscapes with unique musical scales
+  - Combat intensity system (music responds to threats)
+  - Day/night cycle integration (tempo and brightness changes)
+  - Multi-layer synthesis (ambient, bass, melody, effects)
+  - Real-time adaptation to game state
 
 ---
 
@@ -251,6 +257,7 @@ See the [Dev Docs](Dev%20Docs/) directory for comprehensive documentation:
 | Data Viz | D3.js 7.9 | Evolution trees, population graphs, radar charts |
 | Database | Dexie.js 4.0 | IndexedDB wrapper for save/load system |
 | State | Zustand 4.5 | Lightweight state management |
+| Audio | Tone.js 15.1 | Adaptive procedural music generation |
 | Physics | Matter.js 0.20 | Realistic movement and collisions (planned)
 
 ---
