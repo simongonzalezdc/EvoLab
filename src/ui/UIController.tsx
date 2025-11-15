@@ -4,11 +4,24 @@ import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { TraitEditor } from './components/TraitEditor';
 import { GenerationReport } from './components/GenerationReport';
+import { StatsPanel } from './components/StatsPanel';
+import { TimeControlPanel } from './components/TimeControlPanel';
+import { SettingsPanel } from './components/SettingsPanel';
+import { SaveLoadPanel } from './components/SaveLoadPanel';
+import { TutorialPanel } from './components/TutorialPanel';
+import { MainMenu } from './components/MainMenu';
 import type { Traits } from '../types/entities';
+import type { TimeControl } from '../core/TimeControl';
+import type { SaveSystem, GameSettings, SavedSimulation, SavedCreature } from '../data/SaveSystem';
+import type { PopulationDataPoint, LineageNode } from '../data/HistoryTracker';
 
 interface UIState {
   showTraitEditor: boolean;
   showGenerationReport: boolean;
+  showStats: boolean;
+  showSettings: boolean;
+  showSaveLoad: boolean;
+  showTutorial: boolean;
   currentTraits: Traits | null;
   generation: number;
   availableDNA: number;
@@ -16,6 +29,9 @@ interface UIState {
   resourcesCollected: number;
   mutations: string[];
   dnaPointsEarned: number;
+  populationData: PopulationDataPoint[];
+  lineageData: Map<string, LineageNode>;
+  settings: GameSettings;
 }
 
 export class UIController {
@@ -23,8 +39,18 @@ export class UIController {
   private setState: React.Dispatch<React.SetStateAction<UIState>> | null = null;
   private onApplyModifications: ((mods: Partial<Traits>) => void) | null = null;
   private onContinue: (() => void) | null = null;
+  private onNewGame: (() => void) | null = null;
+  private onLoadSimulation: ((sim: SavedSimulation) => void) | null = null;
+  private onLoadCreature: ((creature: SavedCreature) => void) | null = null;
+  private onSettingsChange: ((settings: GameSettings) => void) | null = null;
+  private onExportHistory: (() => void) | null = null;
+  private timeControl: TimeControl;
+  private saveSystem: SaveSystem;
 
-  constructor() {
+  constructor(timeControl: TimeControl, saveSystem: SaveSystem) {
+    this.timeControl = timeControl;
+    this.saveSystem = saveSystem;
+
     const container = document.createElement('div');
     container.id = 'ui-root';
     document.body.appendChild(container);
@@ -37,6 +63,10 @@ export class UIController {
       const [state, setState] = useState<UIState>({
         showTraitEditor: false,
         showGenerationReport: false,
+        showStats: false,
+        showSettings: false,
+        showSaveLoad: false,
+        showTutorial: false,
         currentTraits: null,
         generation: 1,
         availableDNA: 0,
@@ -44,10 +74,20 @@ export class UIController {
         resourcesCollected: 0,
         mutations: [],
         dnaPointsEarned: 0,
+        populationData: [],
+        lineageData: new Map(),
+        settings: this.saveSystem.getDefaultSettings(),
       });
 
       useEffect(() => {
         this.setState = setState;
+
+        // Load settings from DB
+        this.saveSystem.loadSettings().then(settings => {
+          if (settings) {
+            setState(s => ({ ...s, settings }));
+          }
+        });
       }, []);
 
       const handleApplyModifications = (mods: Partial<Traits>) => {
@@ -64,8 +104,59 @@ export class UIController {
         this.onContinue?.();
       };
 
+      const handleNewGame = () => {
+        if (confirm('Start a new game? Current progress will be lost.')) {
+          this.onNewGame?.();
+        }
+      };
+
+      const handleLoadSimulation = (sim: SavedSimulation) => {
+        setState(s => ({ ...s, showSaveLoad: false }));
+        this.onLoadSimulation?.(sim);
+      };
+
+      const handleLoadCreature = (creature: SavedCreature) => {
+        setState(s => ({ ...s, showSaveLoad: false }));
+        this.onLoadCreature?.(creature);
+      };
+
+      const handleSettingsChange = (settings: GameSettings) => {
+        setState(s => ({ ...s, settings }));
+        this.saveSystem.saveSettings(settings);
+        this.onSettingsChange?.(settings);
+      };
+
+      const handleExportHistory = () => {
+        this.onExportHistory?.();
+      };
+
       return (
         <>
+          {/* Main Menu */}
+          <MainMenu
+            onNewGame={handleNewGame}
+            onLoadGame={() => setState(s => ({ ...s, showSaveLoad: true }))}
+            onSettings={() => setState(s => ({ ...s, showSettings: true }))}
+            onTutorial={() => setState(s => ({ ...s, showTutorial: true }))}
+            onExportHistory={handleExportHistory}
+            onToggleStats={() => setState(s => ({ ...s, showStats: !s.showStats }))}
+            showStats={state.showStats}
+          />
+
+          {/* Time Control Panel */}
+          <TimeControlPanel timeControl={this.timeControl} />
+
+          {/* Stats Panel */}
+          {state.showStats && state.currentTraits && (
+            <StatsPanel
+              populationData={state.populationData}
+              lineageData={state.lineageData}
+              currentTraits={state.currentTraits}
+              generation={state.generation}
+            />
+          )}
+
+          {/* Generation Report Modal */}
           {state.showGenerationReport && (
             <GenerationReport
               generation={state.generation}
@@ -77,6 +168,7 @@ export class UIController {
             />
           )}
 
+          {/* Trait Editor Modal */}
           {state.showTraitEditor && state.currentTraits && (
             <TraitEditor
               currentTraits={state.currentTraits}
@@ -85,6 +177,30 @@ export class UIController {
               onApply={handleApplyModifications}
               onCancel={handleCancel}
             />
+          )}
+
+          {/* Settings Modal */}
+          {state.showSettings && (
+            <SettingsPanel
+              settings={state.settings}
+              onSettingsChange={handleSettingsChange}
+              onClose={() => setState(s => ({ ...s, showSettings: false }))}
+            />
+          )}
+
+          {/* Save/Load Modal */}
+          {state.showSaveLoad && (
+            <SaveLoadPanel
+              saveSystem={this.saveSystem}
+              onLoad={handleLoadSimulation}
+              onLoadCreature={handleLoadCreature}
+              onClose={() => setState(s => ({ ...s, showSaveLoad: false }))}
+            />
+          )}
+
+          {/* Tutorial Modal */}
+          {state.showTutorial && (
+            <TutorialPanel onClose={() => setState(s => ({ ...s, showTutorial: false }))} />
           )}
         </>
       );
@@ -100,27 +216,42 @@ export class UIController {
     mutations: string[];
     dnaPointsEarned: number;
   }) {
-    this.setState?.({
+    this.setState?.(s => ({
+      ...s,
       showGenerationReport: true,
       showTraitEditor: false,
-      currentTraits: null,
       ...data,
-      availableDNA: 0,
-    });
+    }));
   }
 
   showTraitEditor(traits: Traits, generation: number, availableDNA: number) {
-    this.setState?.({
+    this.setState?.(s => ({
+      ...s,
       showTraitEditor: true,
       showGenerationReport: false,
       currentTraits: traits,
       generation,
       availableDNA,
-      survivalTime: 0,
-      resourcesCollected: 0,
-      mutations: [],
-      dnaPointsEarned: 0,
-    });
+    }));
+  }
+
+  updateStats(
+    traits: Traits,
+    generation: number,
+    populationData: PopulationDataPoint[],
+    lineageData: Map<string, LineageNode>
+  ) {
+    this.setState?.(s => ({
+      ...s,
+      currentTraits: traits,
+      generation,
+      populationData,
+      lineageData,
+    }));
+  }
+
+  showTutorial() {
+    this.setState?.(s => ({ ...s, showTutorial: true }));
   }
 
   onApply(callback: (mods: Partial<Traits>) => void) {
@@ -129,6 +260,26 @@ export class UIController {
 
   onReportContinue(callback: () => void) {
     this.onContinue = callback;
+  }
+
+  setNewGameCallback(callback: () => void) {
+    this.onNewGame = callback;
+  }
+
+  setLoadSimulationCallback(callback: (sim: SavedSimulation) => void) {
+    this.onLoadSimulation = callback;
+  }
+
+  setLoadCreatureCallback(callback: (creature: SavedCreature) => void) {
+    this.onLoadCreature = callback;
+  }
+
+  setSettingsChangeCallback(callback: (settings: GameSettings) => void) {
+    this.onSettingsChange = callback;
+  }
+
+  setExportHistoryCallback(callback: () => void) {
+    this.onExportHistory = callback;
   }
 
   dispose() {
