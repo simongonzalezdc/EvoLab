@@ -1,0 +1,32 @@
+{
+  "name": "evolab",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Open source browser-based evolution simulator",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext ts,tsx",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
+    "test": "vitest",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "pixi.js": "^8.5.2",
+    "matter-js": "^0.20.0",
+    "d3": "^7.9.0",
+    "zustand": "^4.5.5",
+    "dexie": "^4.0.8"
+  },
+  "devDependencies": {
+    "@types/d3": "^7.4.3",
+    "@types/matter-js": "^0.19.7",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.1",
+    "vitest": "^2.1.8",
+    "eslint": "^9.15.0",
+    "prettier": "^3.3.3"
+  }
+}

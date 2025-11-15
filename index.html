@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="EvoLab - Open source evolution simulator" />
+    <title>EvoLab - Evolution Simulator</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background-color: #0a0e27;
+        color: #ffffff;
+        overflow: hidden;
+      }
+
+      #app {
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+      }
+
+      #hud {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 15px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-family: 'Courier New', monospace;
+        z-index: 100;
+        min-width: 250px;
+      }
+
+      #hud h3 {
+        margin: 0 0 10px 0;
+        font-size: 16px;
+        color: #4CAF50;
+      }
+
+      #hud .stat {
+        display: flex;
+        justify-content: space-between;
+        margin: 5px 0;
+      }
+
+      #hud .stat-label {
+        color: #aaa;
+      }
+
+      #hud .stat-value {
+        font-weight: bold;
+      }
+
+      .bar-container {
+        width: 100%;
+        height: 12px;
+        background: #333;
+        border-radius: 6px;
+        overflow: hidden;
+        margin: 8px 0;
+      }
+
+      .bar {
+        height: 100%;
+        transition: width 0.3s ease;
+        border-radius: 6px;
+      }
+
+      .bar-atp {
+        background: linear-gradient(90deg, #FFD700, #FFA500);
+      }
+
+      .bar-health {
+        background: linear-gradient(90deg, #4CAF50, #2E7D32);
+      }
+
+      #instructions {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 15px;
+        border-radius: 8px;
+        font-size: 12px;
+        z-index: 100;
+      }
+
+      #instructions h4 {
+        margin: 0 0 8px 0;
+        color: #4CAF50;
+      }
+
+      #instructions kbd {
+        background: #333;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: monospace;
+        margin: 0 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="hud">
+        <h3>🧬 EvoLab</h3>
+
+        <div class="stat">
+          <span class="stat-label">ATP:</span>
+          <span class="stat-value" id="atp-value">100</span>
+        </div>
+        <div class="bar-container">
+          <div class="bar bar-atp" id="atp-bar" style="width: 100%"></div>
+        </div>
+
+        <div class="stat">
+          <span class="stat-label">Health:</span>
+          <span class="stat-value" id="health-value">100</span>
+        </div>
+        <div class="bar-container">
+          <div class="bar bar-health" id="health-bar" style="width: 100%"></div>
+        </div>
+
+        <div class="stat">
+          <span class="stat-label">Glucose:</span>
+          <span class="stat-value" id="glucose-value">0</span>
+        </div>
+
+        <div class="stat">
+          <span class="stat-label">Position:</span>
+          <span class="stat-value" id="position-value">0, 0</span>
+        </div>
+
+        <div class="stat">
+          <span class="stat-label">Generation:</span>
+          <span class="stat-value" id="generation-value">1</span>
+        </div>
+      </div>
+
+      <div id="instructions">
+        <h4>Controls</h4>
+        <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> - Move cell</div>
+        <div><kbd>Space</kbd> - Pause</div>
+        <div>Collect yellow glucose particles to restore ATP!</div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
