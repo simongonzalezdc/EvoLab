@@ -8,14 +8,28 @@
 
 ---
 
-## ✨ Features (Phase 1 - MVP Foundation)
+## ✨ Features
 
+### Phase 1 - MVP Foundation ✅
 - 🧬 **Cell Stage Gameplay** - Control a single-celled organism in a procedurally generated lake
 - ⚡ **ATP Energy System** - Manage energy that drains based on size and metabolism
 - 🍬 **Resource Collection** - Collect glucose particles to restore ATP and survive
 - 🎮 **WASD Controls** - Smooth, responsive movement with velocity physics
 - 📊 **Real-time HUD** - Track ATP, health, glucose collected, and position
 - 🌊 **Lake Environment** - Explore a 2000x1500 pixel lake with boundary constraints
+
+### Phase 2 - Genetics & Evolution ✅
+- 🧬 **55+ Genetic Traits** - Comprehensive trait system across 7 categories
+  - Energy & Metabolism, Physical Stats, Senses, Behavioral, Special Abilities, Resource Collection, Environmental Adaptation
+- 🔬 **Reproduction System** - Meet requirements (70% ATP, compounds, maturity) to evolve
+- 🎨 **Trait Editor UI** - Interactive React interface for directed evolution
+  - Spend DNA points (earned from survival) to modify traits
+  - Max ±2 points per generation per trait
+  - Real-time cost calculation and visual feedback
+- 🧪 **Genetic Mutations** - Automatic mutations with beneficial bias (15% rate, ±15% magnitude)
+- 📈 **Generation Tracking** - Lineage history, mutation changelog, DNA point accumulation
+- 🎯 **Trait Interconnections** - Size affects speed, armor reduces mobility, intelligence boosts senses
+- 📊 **Generation Reports** - Post-reproduction summary with stats and mutations
 
 ---
 
@@ -117,17 +131,19 @@ See the [Dev Docs](Dev%20Docs/) directory for comprehensive documentation:
 
 ## 🔮 Roadmap
 
-### Phase 1 - Foundation (Current) ✅
+### Phase 1 - Foundation ✅
 - ✅ Basic cell movement and controls
 - ✅ ATP energy system
 - ✅ Resource collection (glucose)
 - ✅ Real-time HUD
 
-### Phase 2 - Genetics & Evolution (Next)
-- 🔜 40+ trait system (speed, size, armor, metabolism, etc.)
-- 🔜 Genetic algorithm with mutations
-- 🔜 Reproduction system
-- 🔜 Trait editor UI
+### Phase 2 - Genetics & Evolution ✅
+- ✅ 55+ trait system (speed, size, armor, metabolism, intelligence, etc.)
+- ✅ Genetic algorithm with mutations (15% rate, beneficial bias)
+- ✅ Reproduction system (ATP, compound, maturity requirements)
+- ✅ Trait editor UI (React, interactive sliders, DNA point system)
+- ✅ Generation tracking and lineage history
+- ✅ Compound collection (glucose, amino acids, phosphates)
 
 ### Phase 3 - AI & Environment
 - 🔜 AI-controlled competing species
