@@ -11,10 +11,13 @@ import { SaveLoadPanel } from './components/SaveLoadPanel';
 import { TutorialPanel } from './components/TutorialPanel';
 import { MainMenu } from './components/MainMenu';
 import { DeathScreen } from './components/DeathScreen';
+import { AchievementsPanel } from './components/AchievementsPanel';
+import { AchievementNotification } from './components/AchievementNotification';
 import type { Traits } from '../types/entities';
 import type { TimeControl } from '../core/TimeControl';
 import type { SaveSystem, GameSettings, SavedSimulation, SavedCreature } from '../data/SaveSystem';
 import type { PopulationDataPoint, LineageNode } from '../data/HistoryTracker';
+import type { Achievement, Challenge } from '../achievements/AchievementSystem';
 
 interface UIState {
   showTraitEditor: boolean;
@@ -24,6 +27,7 @@ interface UIState {
   showSaveLoad: boolean;
   showTutorial: boolean;
   showDeathScreen: boolean;
+  showAchievements: boolean;
   deathCause: 'atp' | 'health';
   currentTraits: Traits | null;
   generation: number;
@@ -35,6 +39,9 @@ interface UIState {
   populationData: PopulationDataPoint[];
   lineageData: Map<string, LineageNode>;
   settings: GameSettings;
+  achievements: Achievement[];
+  challenges: Challenge[];
+  achievementNotifications: Achievement[];
 }
 
 export class UIController {
@@ -48,6 +55,7 @@ export class UIController {
   private onLoadCreature: ((creature: SavedCreature) => void) | null = null;
   private onSettingsChange: ((settings: GameSettings) => void) | null = null;
   private onExportHistory: (() => void) | null = null;
+  private onShowAchievements: (() => void) | null = null;
   private timeControl: TimeControl;
   private saveSystem: SaveSystem;
 
@@ -72,6 +80,7 @@ export class UIController {
         showSaveLoad: false,
         showTutorial: false,
         showDeathScreen: false,
+        showAchievements: false,
         deathCause: 'atp',
         currentTraits: null,
         generation: 1,
@@ -83,6 +92,9 @@ export class UIController {
         populationData: [],
         lineageData: new Map(),
         settings: this.saveSystem.getDefaultSettings(),
+        achievements: [],
+        challenges: [],
+        achievementNotifications: [],
       });
 
       useEffect(() => {
@@ -141,6 +153,17 @@ export class UIController {
         this.onRestart?.();
       };
 
+      const handleShowAchievements = () => {
+        this.onShowAchievements?.();
+      };
+
+      const handleCloseAchievementNotification = (index: number) => {
+        setState(s => ({
+          ...s,
+          achievementNotifications: s.achievementNotifications.filter((_, i) => i !== index),
+        }));
+      };
+
       return (
         <>
           {/* Main Menu */}
@@ -151,6 +174,7 @@ export class UIController {
             onTutorial={() => setState(s => ({ ...s, showTutorial: true }))}
             onExportHistory={handleExportHistory}
             onToggleStats={() => setState(s => ({ ...s, showStats: !s.showStats }))}
+            onAchievements={handleShowAchievements}
             showStats={state.showStats}
           />
 
@@ -224,6 +248,24 @@ export class UIController {
               onRestart={handleRestart}
             />
           )}
+
+          {/* Achievements Panel */}
+          {state.showAchievements && (
+            <AchievementsPanel
+              achievements={state.achievements}
+              challenges={state.challenges}
+              onClose={() => setState(s => ({ ...s, showAchievements: false }))}
+            />
+          )}
+
+          {/* Achievement Notifications */}
+          {state.achievementNotifications.map((achievement, index) => (
+            <AchievementNotification
+              key={achievement.id}
+              achievement={achievement}
+              onClose={() => handleCloseAchievementNotification(index)}
+            />
+          ))}
         </>
       );
     };
@@ -317,6 +359,26 @@ export class UIController {
 
   setRestartCallback(callback: () => void) {
     this.onRestart = callback;
+  }
+
+  setAchievementsCallback(callback: () => void) {
+    this.onShowAchievements = callback;
+  }
+
+  showAchievements(achievements: Achievement[], challenges: Challenge[]) {
+    this.setState?.(s => ({
+      ...s,
+      showAchievements: true,
+      achievements,
+      challenges,
+    }));
+  }
+
+  showAchievementNotification(achievement: Achievement) {
+    this.setState?.(s => ({
+      ...s,
+      achievementNotifications: [...s.achievementNotifications, achievement],
+    }));
   }
 
   dispose() {

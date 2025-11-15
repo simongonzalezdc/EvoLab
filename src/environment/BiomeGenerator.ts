@@ -10,6 +10,11 @@ export enum BiomeType {
   TOXIC = 'toxic',
   NUTRIENT_RICH = 'nutrient_rich',
   BARREN = 'barren',
+  VOLCANIC = 'volcanic',
+  FROZEN = 'frozen',
+  SWAMP = 'swamp',
+  CRYSTAL = 'crystal',
+  ABYSS = 'abyss',
 }
 
 export interface BiomeData {
@@ -22,6 +27,13 @@ export interface BiomeData {
   pH: number; // 0-14
   pressure: number; // 0-10
   color: number; // Hex color for rendering
+  hazards: BiomeHazard[];
+}
+
+export interface BiomeHazard {
+  type: 'current' | 'temperature' | 'oxygen' | 'radiation' | 'pressure';
+  intensity: number; // 0-1
+  direction?: { x: number; y: number }; // For currents
 }
 
 export class BiomeGenerator {
@@ -29,6 +41,7 @@ export class BiomeGenerator {
   private depthNoise: PerlinNoise;
   private nutrientNoise: PerlinNoise;
   private toxicNoise: PerlinNoise;
+  private currentNoise: PerlinNoise;
   private width: number;
   private height: number;
 
@@ -39,6 +52,7 @@ export class BiomeGenerator {
     this.depthNoise = new PerlinNoise(seed + 1);
     this.nutrientNoise = new PerlinNoise(seed + 2);
     this.toxicNoise = new PerlinNoise(seed + 3);
+    this.currentNoise = new PerlinNoise(seed + 4);
   }
 
   // Get biome data at world coordinates
@@ -67,6 +81,7 @@ export class BiomeGenerator {
     const pH = this.calculatePH(toxicity, nutrients);
     const pressure = depth;
     const color = this.getBiomeColor(type);
+    const hazards = this.calculateHazards(type, temperature, depth, nx, ny);
 
     return {
       type,
@@ -78,6 +93,7 @@ export class BiomeGenerator {
       pH,
       pressure,
       color,
+      hazards,
     };
   }
 
@@ -87,6 +103,31 @@ export class BiomeGenerator {
     nutrients: number,
     toxicity: number
   ): BiomeType {
+    // Very deep = abyss
+    if (depth > 8) {
+      return BiomeType.ABYSS;
+    }
+
+    // Very hot = volcanic
+    if (temp > 32) {
+      return BiomeType.VOLCANIC;
+    }
+
+    // Very cold and shallow = frozen
+    if (temp < 8 && depth < 4) {
+      return BiomeType.FROZEN;
+    }
+
+    // High nutrients and high toxicity = swamp
+    if (nutrients > 6 && toxicity > 3) {
+      return BiomeType.SWAMP;
+    }
+
+    // Moderate temp, low toxicity, moderate depth = crystal
+    if (temp > 18 && temp < 24 && toxicity < 2 && depth > 4 && depth < 7) {
+      return BiomeType.CRYSTAL;
+    }
+
     // High toxicity = toxic biome
     if (toxicity > 4) {
       return BiomeType.TOXIC;
@@ -141,9 +182,109 @@ export class BiomeGenerator {
         return 0x66bb6a; // Green
       case BiomeType.BARREN:
         return 0x5d4037; // Brown
+      case BiomeType.VOLCANIC:
+        return 0xff6d00; // Orange-red
+      case BiomeType.FROZEN:
+        return 0xb3e5fc; // Ice blue
+      case BiomeType.SWAMP:
+        return 0x558b2f; // Dark green
+      case BiomeType.CRYSTAL:
+        return 0x9c27b0; // Bright purple
+      case BiomeType.ABYSS:
+        return 0x1a237e; // Very dark blue
       default:
         return 0x0a0e27;
     }
+  }
+
+  private calculateHazards(
+    type: BiomeType,
+    temperature: number,
+    depth: number,
+    nx: number,
+    ny: number
+  ): BiomeHazard[] {
+    const hazards: BiomeHazard[] = [];
+
+    // Ocean currents (all biomes have some current)
+    const currentValue = this.currentNoise.octaveNoise(nx * 2, ny * 2, 2, 0.5);
+    const currentAngle = currentValue * Math.PI * 2;
+    const currentIntensity = Math.abs(currentValue) * 0.5;
+
+    hazards.push({
+      type: 'current',
+      intensity: currentIntensity,
+      direction: {
+        x: Math.cos(currentAngle),
+        y: Math.sin(currentAngle),
+      },
+    });
+
+    // Biome-specific hazards
+    switch (type) {
+      case BiomeType.VOLCANIC:
+        // Extreme temperature damage
+        hazards.push({
+          type: 'temperature',
+          intensity: 0.8,
+        });
+        // Radiation from volcanic activity
+        hazards.push({
+          type: 'radiation',
+          intensity: 0.6,
+        });
+        break;
+
+      case BiomeType.FROZEN:
+        // Cold temperature damage
+        hazards.push({
+          type: 'temperature',
+          intensity: 0.5,
+        });
+        break;
+
+      case BiomeType.ABYSS:
+        // Extreme pressure
+        hazards.push({
+          type: 'pressure',
+          intensity: 0.9,
+        });
+        // Low oxygen
+        hazards.push({
+          type: 'oxygen',
+          intensity: 0.7,
+        });
+        break;
+
+      case BiomeType.SWAMP:
+        // Low oxygen
+        hazards.push({
+          type: 'oxygen',
+          intensity: 0.5,
+        });
+        break;
+
+      case BiomeType.TOXIC:
+        // Radiation from toxins
+        hazards.push({
+          type: 'radiation',
+          intensity: 0.4,
+        });
+        break;
+
+      case BiomeType.DEEP_COLD:
+      case BiomeType.DEEP_WARM:
+        // Pressure increases with depth
+        if (depth > 7) {
+          hazards.push({
+            type: 'pressure',
+            intensity: (depth - 7) / 3,
+          });
+        }
+        break;
+    }
+
+    return hazards;
   }
 
   private mapRange(value: number, inMin: number, inMax: number, outMin: number, outMax: number): number {

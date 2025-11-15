@@ -44,6 +44,7 @@ class EvoLabDatabase extends Dexie {
   simulations!: Table<SavedSimulation>;
   creatures!: Table<SavedCreature>;
   settings!: Table<{ id: number; data: GameSettings }>;
+  achievements!: Table<{ id: number; data: string }>;
 
   constructor() {
     super('EvoLabDB');
@@ -51,6 +52,14 @@ class EvoLabDatabase extends Dexie {
       simulations: '++id, name, timestamp, generation',
       creatures: '++id, name, timestamp',
       settings: 'id',
+    });
+
+    // Version 2: Add achievements table
+    this.version(2).stores({
+      simulations: '++id, name, timestamp, generation',
+      creatures: '++id, name, timestamp',
+      settings: 'id',
+      achievements: 'id',
     });
   }
 }
@@ -229,6 +238,24 @@ export class SaveSystem {
     } catch (error) {
       console.error('Failed to import creature:', error);
       return null;
+    }
+  }
+
+  async saveAchievements(achievementData: string): Promise<void> {
+    try {
+      await this.db.achievements.put({ id: 1, data: achievementData });
+    } catch (error) {
+      console.error('Failed to save achievements:', error);
+    }
+  }
+
+  async loadAchievements(): Promise<string | undefined> {
+    try {
+      const result = await this.db.achievements.get(1);
+      return result?.data;
+    } catch (error) {
+      console.error('Failed to load achievements:', error);
+      return undefined;
     }
   }
 
