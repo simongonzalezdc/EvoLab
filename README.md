@@ -31,6 +31,23 @@
 - 🎯 **Trait Interconnections** - Size affects speed, armor reduces mobility, intelligence boosts senses
 - 📊 **Generation Reports** - Post-reproduction summary with stats and mutations
 
+### Phase 3 - AI & Environment ✅
+- 🌍 **Procedural Biome Generation** - 7 distinct zones using Perlin noise
+  - Shallow Warm, Shallow Cold, Deep Warm, Deep Cold, Toxic, Nutrient Rich, Barren
+  - Dynamic properties: temperature, depth, nutrients, toxicity, light, pH, pressure
+- 🤖 **3 AI Species** - Competing organisms with distinct behaviors
+  - **Herbivores** (green): Small, fast, flee from predators, seek resources
+  - **Carnivores** (red): Medium, aggressive, hunt smaller cells
+  - **Omnivores** (orange): Balanced, opportunistic, attack weak prey or gather resources
+- ⚔️ **Combat System** - Predator-prey interactions with damage, armor, toxins
+- 👥 **Population Management** - Auto-spawning, lifecycle management, max population caps
+  - 15 Herbivores, 8 Carnivores, 10 Omnivores (max populations)
+- ☀️ **Day/Night Cycle** - 24-hour cycle with 4 time periods (dawn, day, dusk, night)
+  - Dynamic lighting (0.3-1.0), ambient colors, 10x speed by default
+- 🎨 **Visual Biome Rendering** - Tile-based rendering with dynamic visibility
+  - Only renders visible tiles around camera for performance
+  - Lighting effects based on day/night cycle
+
 ---
 
 ## 🚀 Quick Start
@@ -145,11 +162,13 @@ See the [Dev Docs](Dev%20Docs/) directory for comprehensive documentation:
 - ✅ Generation tracking and lineage history
 - ✅ Compound collection (glucose, amino acids, phosphates)
 
-### Phase 3 - AI & Environment
-- 🔜 AI-controlled competing species
-- 🔜 Procedural biome generation (7 distinct zones)
-- 🔜 Day/night cycle
-- 🔜 Population dynamics
+### Phase 3 - AI & Environment ✅
+- ✅ AI-controlled competing species (Herbivore, Carnivore, Omnivore)
+- ✅ Procedural biome generation (7 distinct zones with Perlin noise)
+- ✅ Day/night cycle (configurable speed, lighting effects)
+- ✅ Population dynamics (auto-spawning, max population limits)
+- ✅ Combat system (predator-prey interactions, damage calculation)
+- ✅ Biome-based environment (temperature, depth, nutrients, toxicity, pH)
 
 ### Phase 4 - Data Visualization & Polish
 - 🔜 D3.js charts (population, evolution tree, trait radar)
