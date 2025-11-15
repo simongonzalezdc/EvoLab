@@ -132,7 +132,7 @@ export class MusicManager {
       await Tone.start();
       await this.reverb.generate();
       this.isInitialized = true;
-      console.log('MusicManager initialized');
+      // Music manager successfully initialized
     } catch (error) {
       console.error('Failed to initialize MusicManager:', error);
     }
