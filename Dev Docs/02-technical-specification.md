@@ -179,6 +179,22 @@ EvoLab is a browser-based evolution simulator built as a single-page application
   - `saves` table: id, name, gameState, timestamp
   - `settings` table: key-value config
 
+### Audio System
+
+**Library:** Tone.js v15.1+
+- **Purpose:** Adaptive procedural music generation
+- **Features used:**
+  - Synthesizers (PolySynth, Monosynth) for multi-layer audio
+  - Effects chain (Reverb, Delay, Filter) for atmospheric soundscapes
+  - Transport system for sequencing and tempo control
+  - Real-time parameter modulation based on game state
+- **Adaptive Elements:**
+  - 7 biome-specific musical scales and soundscapes
+  - Combat intensity modulation (melody frequency and filter cutoff)
+  - Day/night cycle integration (tempo and brightness changes)
+  - Smooth transitions between game states
+- **Performance:** Uses Web Audio API (GPU-accelerated), negligible CPU impact
+
 ### Development Tools
 
 **Linter:** ESLint v9.x with TypeScript plugin
@@ -247,6 +263,9 @@ evolab/
 │   │   ├── MutationEngine.ts    # Mutation operations
 │   │   ├── SelectionPressure.ts # Environmental fitness
 │   │   └── TraitSystem.ts       # Trait definitions + interactions
+│   │
+│   ├── audio/                   # Adaptive procedural music system
+│   │   └── MusicManager.ts      # Tone.js music generation & adaptation
 │   │
 │   ├── ai/                      # AI species behavior
 │   │   ├── AIBehavior.ts        # Base AI behavior class
