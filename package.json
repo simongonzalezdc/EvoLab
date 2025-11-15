@@ -20,6 +20,7 @@
     "pixi.js": "^8.5.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "tone": "^15.1.22",
     "zustand": "^4.5.5"
   },
   "devDependencies": {

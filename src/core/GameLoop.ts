@@ -15,6 +15,7 @@ import { BiomeGenerator } from '../environment/BiomeGenerator';
 import { BiomeRenderer } from '../rendering/BiomeRenderer';
 import { DayNightCycle } from '../environment/DayNightCycle';
 import { Genome } from '../genetics/Genome';
+import { MusicManager } from '../audio/MusicManager';
 
 export class GameLoop {
   private renderer: PixiApp;
@@ -27,12 +28,14 @@ export class GameLoop {
   private biomeGenerator: BiomeGenerator;
   private biomeRenderer: BiomeRenderer;
   private dayNightCycle: DayNightCycle;
+  private musicManager: MusicManager;
   private lastTime = 0;
   private isRunning = false;
   private animationFrameId: number | null = null;
   private pendingModifications: Partial<Traits> | null = null;
   private lastAutoSave = 0;
   private autoSaveInterval = Config.AUTO_SAVE_INTERVAL_MINUTES * 60 * 1000;
+  private currentSettings: GameSettings;
 
   constructor() {
     this.renderer = new PixiApp();
@@ -45,9 +48,14 @@ export class GameLoop {
     this.biomeGenerator = new BiomeGenerator(Config.LAKE_WIDTH, Config.LAKE_HEIGHT);
     this.biomeRenderer = new BiomeRenderer(this.biomeGenerator);
     this.dayNightCycle = new DayNightCycle(Config.DAY_NIGHT_START_TIME, Config.DAY_NIGHT_SPEED_MULTIPLIER);
+    this.musicManager = new MusicManager();
+    this.currentSettings = this.saveSystem.getDefaultSettings();
 
     // Setup UI callbacks
     this.setupUICallbacks();
+
+    // Load saved settings
+    this.loadSettings();
   }
 
   private setupUICallbacks(): void {
@@ -97,6 +105,9 @@ export class GameLoop {
 
     // Initialize renderer
     await this.renderer.initialize();
+
+    // Initialize music manager
+    await this.musicManager.initialize();
 
     // Add biome layer to renderer (underneath entities)
     this.renderer.addBiomeLayer(this.biomeRenderer.getContainer());
@@ -213,6 +224,9 @@ export class GameLoop {
     const lightLevel = this.dayNightCycle.getLightLevel();
     this.biomeRenderer.updateLighting(lightLevel);
 
+    // Update music based on game state
+    this.updateMusic();
+
     // Update population tracking (every second in game time)
     this.updatePopulationTracking();
 
@@ -238,6 +252,59 @@ export class GameLoop {
       stats.omnivore || 0,
       stats.player || 0
     );
+  }
+
+  private updateMusic(): void {
+    const player = this.entityManager.playerCell;
+    if (!player) return;
+
+    // Get current biome at player position
+    const biome = this.biomeGenerator.getBiomeAt(player.position.x, player.position.y);
+
+    // Calculate combat intensity based on nearby threats
+    const combatIntensity = this.calculateCombatIntensity();
+
+    // Update music state
+    this.musicManager.updateState({
+      biome: biome.type,
+      timeOfDay: this.dayNightCycle.getTimeOfDay(),
+      lightLevel: this.dayNightCycle.getLightLevel(),
+      combatIntensity,
+      generation: player.genome.lineage.generation,
+    });
+  }
+
+  private calculateCombatIntensity(): number {
+    const player = this.entityManager.playerCell;
+    if (!player) return 0;
+
+    // Check for nearby cells within detection range
+    // Cells larger than player are considered threats
+    let closestThreatDistance = Infinity;
+
+    for (const cell of this.entityManager.getAllCells()) {
+      if (cell === player) continue;
+      if (cell.traits.health <= 0) continue; // Skip dead cells
+
+      // Larger cells are potential threats
+      const isThreat = cell.traits.size > player.traits.size * 0.8;
+
+      if (isThreat) {
+        const dx = cell.position.x - player.position.x;
+        const dy = cell.position.y - player.position.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < closestThreatDistance) {
+          closestThreatDistance = distance;
+        }
+      }
+    }
+
+    // Combat intensity: 0 at far distances, 1 at very close
+    const maxDetectionRange = 300;
+    if (closestThreatDistance === Infinity) return 0;
+
+    return Math.max(0, 1 - (closestThreatDistance / maxDetectionRange));
   }
 
   // Render game
@@ -460,10 +527,35 @@ export class GameLoop {
     }
   }
 
+  // Load settings from storage
+  private async loadSettings(): Promise<void> {
+    try {
+      const savedSettings = await this.saveSystem.loadSettings();
+      if (savedSettings) {
+        this.currentSettings = savedSettings;
+        this.applySettings(savedSettings);
+      }
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+    }
+  }
+
   // Apply settings
   private applySettings(settings: GameSettings): void {
+    this.currentSettings = settings;
     this.autoSaveInterval = settings.autoSaveInterval * 60 * 1000;
-    // Apply other settings as needed
+
+    // Apply music settings
+    if (settings.musicEnabled) {
+      this.musicManager.enable();
+    } else {
+      this.musicManager.disable();
+    }
+
+    // Save settings
+    this.saveSystem.saveSettings(settings).catch(err => {
+      console.error('Failed to save settings:', err);
+    });
   }
 
   // Export evolution history to CSV
@@ -513,5 +605,6 @@ export class GameLoop {
     this.entityManager.dispose();
     this.renderer.dispose();
     this.inputHandler.dispose();
+    this.musicManager.dispose();
   }
 }
