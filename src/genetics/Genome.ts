@@ -72,6 +72,11 @@ export class Genome {
 
       // Visual
       color: 0x4caf50, // Green
+
+      // Reproduction (initialized but can be set later)
+      gender: undefined,
+      fertilityRate: 0.8,
+      matingDisplayStrength: 5,
     };
 
     const lineage: LineageInfo = {
@@ -80,6 +85,9 @@ export class Genome {
       parentId: null,
       birthTime: Date.now(),
       mutations: [],
+      motherLineageId: undefined,
+      fatherLineageId: undefined,
+      speciesId: 'species-001', // Start with base species
     };
 
     return new Genome(defaultTraits, lineage);

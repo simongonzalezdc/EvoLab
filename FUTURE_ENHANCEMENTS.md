@@ -6,50 +6,88 @@ This document tracks potential improvements, unimplemented features, and future 
 
 ## 📋 Unimplemented Features from Original Roadmap
 
-### ❌ Matter.js Physics Integration
-**Status**: Planned but not implemented
-**Current State**: Basic velocity-based movement system
+### ✅ Matter.js Physics Integration
+**Status**: ✅ IMPLEMENTED
+**Implementation Date**: November 15, 2025
 **Description**: Full physics engine integration for realistic collisions, forces, and interactions
-- Collision detection between cells
-- Realistic bouncing and momentum
-- Compound physics bodies
-- Joint constraints for multi-cellular organisms
+- ✅ Collision detection between cells
+- ✅ Realistic bouncing and momentum
+- ✅ Compound physics bodies
+- ✅ Joint constraints for multi-cellular organisms
+
+**Implementation Details**:
+- Created `PhysicsEngine` class wrapping Matter.js
+- Integrated with Cell movement system (can toggle on/off)
+- Supports both single-cell and compound multi-cellular bodies
+- Realistic water physics with buoyancy and friction
+- Boundary walls to keep cells within lake
+
+**Files Added**:
+- `src/physics/PhysicsEngine.ts`
+- Integration in `EvolutionSystemsManager`
 
 **Complexity**: High
-**Estimated Effort**: 2-3 weeks
-**Dependencies**: May conflict with current movement system, needs careful integration
+**Actual Effort**: Implemented in 1 day
 
 ---
 
-### ❌ Sexual Reproduction
-**Status**: Not implemented
-**Current State**: Asexual reproduction only
+### ✅ Sexual Reproduction
+**Status**: ✅ IMPLEMENTED
+**Implementation Date**: November 15, 2025
 **Description**: Two-parent reproduction with genetic recombination
-- Mate-finding behavior for AI
-- Genetic crossover (mixing parent genes)
-- Dominant/recessive traits
-- Compatibility checking
-- Mating rituals and displays
+- ✅ Mate-finding behavior for AI
+- ✅ Genetic crossover (mixing parent genes)
+- ✅ Dominant/recessive traits
+- ✅ Compatibility checking
+- ✅ Mating rituals and displays
+
+**Implementation Details**:
+- Gender system added to all cells (male/female)
+- `MatingSystem` handles compatibility checks and genetic crossover
+- `MatingAI` provides AI behavior for finding mates
+- Dominant/recessive trait inheritance rules
+- Mating display animations for males
+- Compatibility scoring based on genetic distance
+- Can toggle between asexual and sexual reproduction modes
+
+**Files Added**:
+- `src/genetics/MatingSystem.ts`
+- `src/ai/MatingAI.ts`
+- Updated `ReproductionSystem` with sexual reproduction support
+- Updated `Genome` and trait types with gender/fertility traits
 
 **Complexity**: High
-**Estimated Effort**: 3-4 weeks
-**Dependencies**: Requires gender system, mating AI behaviors
+**Actual Effort**: Implemented in 1 day
 
 ---
 
-### ❌ Speciation System
-**Status**: Not implemented
-**Current State**: No species divergence tracking
+### ✅ Speciation System
+**Status**: ✅ IMPLEMENTED
+**Implementation Date**: November 15, 2025
 **Description**: Track when populations diverge into distinct species
-- Genetic distance calculation
-- Reproductive isolation
-- Species naming and classification
-- Phylogenetic tree visualization
-- Extinction events
+- ✅ Genetic distance calculation
+- ✅ Reproductive isolation
+- ✅ Species naming and classification
+- ✅ Phylogenetic tree visualization
+- ✅ Extinction events
+
+**Implementation Details**:
+- `SpeciationSystem` tracks species divergence using genetic distance
+- Automatic species detection when populations become reproductively isolated
+- Creative species naming (e.g., "Aquacoccus", "Biobacillus")
+- Phylogenetic tree visualization component using D3.js
+- Extinction tracking when species population drops to zero
+- Species diversity metrics
+
+**Files Added**:
+- `src/genetics/SpeciationSystem.ts`
+- `src/ui/components/PhylogeneticTreePanel.tsx`
+- `src/ui/components/EvolutionControlPanel.tsx`
+- Integration in `EvolutionSystemsManager`
 
 **Complexity**: Medium-High
-**Estimated Effort**: 2-3 weeks
-**Dependencies**: Sexual reproduction would enhance this feature
+**Actual Effort**: Implemented in 1 day
+**Note**: Works with both asexual and sexual reproduction, but enhanced by sexual reproduction
 
 ---
 
