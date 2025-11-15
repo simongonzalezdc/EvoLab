@@ -32,13 +32,17 @@
 - 📊 **Generation Reports** - Post-reproduction summary with stats and mutations
 
 ### Phase 3 - AI & Environment ✅
-- 🌍 **Procedural Biome Generation** - 7 distinct zones using Perlin noise
-  - Shallow Warm, Shallow Cold, Deep Warm, Deep Cold, Toxic, Nutrient Rich, Barren
+- 🌍 **Procedural Biome Generation** - 12 distinct zones using Perlin noise
+  - Original 7: Shallow Warm, Shallow Cold, Deep Warm, Deep Cold, Toxic, Nutrient Rich, Barren
+  - New 5: Volcanic, Frozen, Swamp, Crystal, Abyss
   - Dynamic properties: temperature, depth, nutrients, toxicity, light, pH, pressure
-- 🤖 **3 AI Species** - Competing organisms with distinct behaviors
+  - Environmental hazards: currents, temperature damage, oxygen depletion, radiation, pressure
+- 🤖 **3 AI Species** - Competing organisms with advanced behaviors
   - **Herbivores** (green): Small, fast, flee from predators, seek resources
-  - **Carnivores** (red): Medium, aggressive, hunt smaller cells
+  - **Carnivores** (red): Medium, aggressive, hunt in packs, territorial behavior
   - **Omnivores** (orange): Balanced, opportunistic, attack weak prey or gather resources
+  - **Pack Behavior**: Coordinated hunting, pack leaders, cohesion mechanics
+  - **Learning AI**: Adapts to player strategies, tracks successful tactics
 - ⚔️ **Combat System** - Predator-prey interactions with damage, armor, toxins
 - 👥 **Population Management** - Auto-spawning, lifecycle management, max population caps
   - 15 Herbivores, 8 Carnivores, 10 Omnivores (max populations)
@@ -90,11 +94,29 @@
   - Export history, toggle stats display
   - Fixed position UI with clean modern design
 - 🎵 **Adaptive Procedural Music** - Dynamic soundtrack system
-  - 7 biome-specific soundscapes with unique musical scales
+  - 12 biome-specific soundscapes with unique musical scales
   - Combat intensity system (music responds to threats)
   - Day/night cycle integration (tempo and brightness changes)
   - Multi-layer synthesis (ambient, bass, melody, effects)
   - Real-time adaptation to game state
+- 🏆 **Achievements & Challenges System** - Track your evolutionary progress
+  - 23 achievements across 6 categories (Survival, Evolution, Combat, Exploration, Traits, Challenges)
+  - Secret hidden achievements to discover
+  - 4 timed challenges with DNA point rewards
+  - Progress tracking and persistence
+  - Beautiful achievement notification popup
+  - Rarity tiers: Common, Uncommon, Rare, Epic, Legendary
+- 🌋 **Expanded Biome System** - 12 unique biomes with environmental hazards
+  - **New Biomes**: Volcanic, Frozen, Swamp, Crystal, Abyss (+ original 7)
+  - **Environmental Hazards**: Ocean currents, temperature extremes, oxygen depletion, radiation, pressure damage
+  - Hazards respond to armor and resistance traits
+  - Unique musical soundscapes for each biome type
+- 🤖 **Advanced AI Behaviors** - Intelligent competing organisms
+  - **Pack Behavior**: Carnivores form hunting packs (2-5 members), coordinated attacks
+  - **Territorial Mechanics**: AI claims and defends resource-rich territories
+  - **Learning System**: AI adapts to player strategies, remembers encounters
+  - **Difficulty Scaling**: AI becomes cautious after repeated losses
+  - Pack leaders coordinate hunts with 20% speed boost
 
 ---
 
@@ -240,10 +262,10 @@ See the [Dev Docs](Dev%20Docs/) directory for comprehensive documentation:
 
 ### Future Enhancements
 - 🔜 Multiplayer mode (compete with other players)
-- 🔜 More biomes and environmental hazards
-- 🔜 Advanced AI behaviors and species interactions
-- 🔜 Achievements and challenges system
 - 🔜 Mobile/touch controls support
+- 🔜 Advanced evolution mechanics (sexual reproduction, speciation)
+- 🔜 More challenge modes and game scenarios
+- 🔜 Community creature sharing platform
 
 ---
 
@@ -298,4 +320,4 @@ Free for educational and commercial use.
 
 **Made with ❤️ for science education and open source**
 
-*Last Updated: November 15, 2025 - Phase 4 Complete*
+*Last Updated: November 15, 2025 - Phase 4 Complete + Enhanced Features*
