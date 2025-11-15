@@ -4,7 +4,9 @@ import { Cell } from './Cell';
 import { Resource } from './Resource';
 import { PixiApp } from '../rendering/PixiApp';
 import { Config } from '../core/Config';
-import type { Traits } from '../types/entities';
+import { Genome } from '../genetics/Genome';
+import { ReproductionSystem } from '../genetics/ReproductionSystem';
+import { TraitSystem } from '../genetics/TraitSystem';
 
 export class EntityManager {
   private cells: Map<string, Cell> = new Map();
@@ -12,31 +14,22 @@ export class EntityManager {
   private renderer: PixiApp;
   public playerCell: Cell | null = null;
   public glucoseCollected = 0;
+  public reproductionSystem: ReproductionSystem;
 
   constructor(renderer: PixiApp) {
     this.renderer = renderer;
+    this.reproductionSystem = new ReproductionSystem();
   }
 
-  // Create player cell
-  createPlayerCell(): Cell {
-    const traits: Traits = {
-      atp: Config.START_ATP,
-      maxATP: Config.MAX_ATP,
-      metabolismRate: 1.0,
-      energyEfficiency: 1.0,
-      size: 5,
-      speed: Config.MOVE_SPEED,
-      maxSpeed: Config.MAX_VELOCITY,
-      health: 100,
-      maxHealth: 100,
-      color: Config.PLAYER_COLOR,
-    };
+  // Create player cell from genome
+  createPlayerCell(genome?: Genome): Cell {
+    const playerGenome = genome || Genome.createDefault();
 
     const sprite = this.renderer.createCircle(
       Config.PLAYER_START_X,
       Config.PLAYER_START_Y,
       Config.PLAYER_RADIUS,
-      Config.PLAYER_COLOR
+      playerGenome.traits.color
     );
 
     this.renderer.addToWorld(sprite);
@@ -45,7 +38,7 @@ export class EntityManager {
       'player',
       Config.PLAYER_START_X,
       Config.PLAYER_START_Y,
-      traits,
+      playerGenome,
       sprite,
       true
     );
@@ -105,14 +98,49 @@ export class EntityManager {
 
           if (resource.type === 'glucose') {
             player.restoreATP(Config.ATP_FROM_GLUCOSE);
+            player.collectCompound('glucose', 5);
             this.glucoseCollected++;
-            console.log(
-              `Collected glucose! ATP: ${player.traits.atp.toFixed(1)}/${player.traits.maxATP}`
-            );
+          } else if (resource.type === 'aminoAcid') {
+            player.collectCompound('aminoAcid', 3);
+          } else if (resource.type === 'phosphate') {
+            player.collectCompound('phosphate', 2);
           }
         }
       }
     });
+  }
+
+  // Handle player reproduction
+  reproducePlayer(modifications: Partial<typeof this.playerCell.traits> = {}): Cell | null {
+    if (!this.playerCell) return null;
+
+    // Calculate DNA points earned
+    const dnaPoints = TraitSystem.calculateDNAPoints(
+      this.playerCell.survivalTime,
+      this.glucoseCollected
+    );
+    this.playerCell.genome.dnaPoints += dnaPoints;
+
+    // Perform reproduction
+    const offspringGenome = this.reproductionSystem.reproduce(
+      this.playerCell.genome,
+      modifications
+    );
+
+    // Remove old player cell
+    this.renderer.removeFromWorld(this.playerCell.sprite);
+    this.cells.delete('player');
+
+    // Create new player cell with offspring genome
+    const newCell = this.createPlayerCell(offspringGenome);
+
+    // Mark reproduction
+    newCell.markReproduction();
+
+    // Reset glucose counter
+    this.glucoseCollected = 0;
+
+    return newCell;
   }
 
   // Get all cells

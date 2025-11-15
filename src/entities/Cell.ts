@@ -1,8 +1,9 @@
 // Cell entity representing a single-celled organism
 
 import { Graphics } from 'pixi.js';
-import type { Vector2D, Traits } from '../types/entities';
+import type { Vector2D, Traits, CompoundStorage } from '../types/entities';
 import { Config } from '../core/Config';
+import { Genome } from '../genetics/Genome';
 
 export class Cell {
   public id: string;
@@ -11,21 +12,33 @@ export class Cell {
   public traits: Traits;
   public sprite: Graphics;
   public isPlayer: boolean;
+  public genome: Genome;
+  public compounds: CompoundStorage;
+  public survivalTime = 0;
+  public birthTime: number;
+  public lastReproductionTime = 0;
 
   constructor(
     id: string,
     x: number,
     y: number,
-    traits: Traits,
+    genome: Genome,
     sprite: Graphics,
     isPlayer = false
   ) {
     this.id = id;
     this.position = { x, y };
     this.velocity = { x: 0, y: 0 };
-    this.traits = traits;
+    this.genome = genome;
+    this.traits = genome.traits;
     this.sprite = sprite;
     this.isPlayer = isPlayer;
+    this.birthTime = Date.now();
+    this.compounds = {
+      glucose: 0,
+      aminoAcids: 0,
+      phosphates: 0,
+    };
   }
 
   // Update cell state each frame
@@ -45,8 +58,47 @@ export class Cell {
     // Drain ATP over time
     this.drainATP(deltaTime);
 
+    // Update survival time
+    this.survivalTime = (Date.now() - this.birthTime) / 1000;
+
     // Boundary check (keep within lake)
     this.constrainToLake();
+  }
+
+  // Collect compound
+  collectCompound(type: 'glucose' | 'aminoAcid' | 'phosphate', amount: number): void {
+    if (type === 'glucose') {
+      this.compounds.glucose += amount;
+    } else if (type === 'aminoAcid') {
+      this.compounds.aminoAcids += amount;
+    } else if (type === 'phosphate') {
+      this.compounds.phosphates += amount;
+    }
+
+    // Clamp to max storage
+    const maxStorage = this.traits.maxStorage;
+    this.compounds.glucose = Math.min(this.compounds.glucose, maxStorage);
+    this.compounds.aminoAcids = Math.min(this.compounds.aminoAcids, maxStorage);
+    this.compounds.phosphates = Math.min(this.compounds.phosphates, maxStorage);
+  }
+
+  // Check if reproduction requirements are met
+  canReproduce(): boolean {
+    const atpPercent = (this.traits.atp / this.traits.maxATP) * 100;
+    const timeSinceLastReproduction = (Date.now() - this.lastReproductionTime) / 1000;
+
+    return (
+      atpPercent >= 70 &&
+      this.compounds.glucose >= 50 &&
+      this.compounds.aminoAcids >= 30 &&
+      this.compounds.phosphates >= 20 &&
+      timeSinceLastReproduction >= 60
+    );
+  }
+
+  // Update last reproduction time
+  markReproduction(): void {
+    this.lastReproductionTime = Date.now();
   }
 
   // Apply movement force (for player input)

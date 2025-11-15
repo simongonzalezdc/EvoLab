@@ -4,20 +4,46 @@ import { PixiApp } from '../rendering/PixiApp';
 import { InputHandler } from './InputHandler';
 import { EntityManager } from '../entities/EntityManager';
 import { Config } from './Config';
+import { UIController } from '../ui/UIController';
+import type { Traits } from '../types/entities';
 
 export class GameLoop {
   private renderer: PixiApp;
   private inputHandler: InputHandler;
   private entityManager: EntityManager;
+  private uiController: UIController;
   private lastTime = 0;
   private isRunning = false;
   private isPaused = false;
   private animationFrameId: number | null = null;
+  private pendingModifications: Partial<Traits> | null = null;
 
   constructor() {
     this.renderer = new PixiApp();
     this.inputHandler = new InputHandler();
     this.entityManager = new EntityManager(this.renderer);
+    this.uiController = new UIController();
+
+    // Setup UI callbacks
+    this.setupUICallbacks();
+  }
+
+  private setupUICallbacks(): void {
+    this.uiController.onApply((modifications) => {
+      this.pendingModifications = modifications;
+    });
+
+    this.uiController.onReportContinue(() => {
+      // Show trait editor after generation report
+      if (this.entityManager.playerCell) {
+        const player = this.entityManager.playerCell;
+        this.uiController.showTraitEditor(
+          player.traits,
+          player.genome.lineage.generation,
+          player.genome.dnaPoints
+        );
+      }
+    });
   }
 
   async initialize(): Promise<void> {
@@ -124,16 +150,72 @@ export class GameLoop {
       healthBar.style.width = `${healthPercent}%`;
     }
 
-    // Update Glucose
+    // Update Compounds
     const glucoseValue = document.getElementById('glucose-value');
     if (glucoseValue) {
-      glucoseValue.textContent = this.entityManager.glucoseCollected.toString();
+      glucoseValue.textContent = Math.floor(player.compounds.glucose).toString();
     }
 
-    // Update Position
-    const positionValue = document.getElementById('position-value');
-    if (positionValue) {
-      positionValue.textContent = `${Math.floor(player.position.x)}, ${Math.floor(player.position.y)}`;
+    const aminoAcidValue = document.getElementById('aminoacid-value');
+    if (aminoAcidValue) {
+      aminoAcidValue.textContent = Math.floor(player.compounds.aminoAcids).toString();
+    }
+
+    const phosphateValue = document.getElementById('phosphate-value');
+    if (phosphateValue) {
+      phosphateValue.textContent = Math.floor(player.compounds.phosphates).toString();
+    }
+
+    // Update Generation
+    const generationValue = document.getElementById('generation-value');
+    if (generationValue) {
+      generationValue.textContent = player.genome.lineage.generation.toString();
+    }
+
+    // Update DNA Points
+    const dnaValue = document.getElementById('dna-value');
+    if (dnaValue) {
+      dnaValue.textContent = Math.floor(player.genome.dnaPoints).toString();
+    }
+
+    // Update Reproduction Button
+    const reproduceBtn = document.getElementById('reproduce-btn') as HTMLButtonElement;
+    if (reproduceBtn) {
+      const canReproduce = player.canReproduce();
+      reproduceBtn.style.display = canReproduce ? 'block' : 'none';
+
+      // Add click handler if not already added
+      if (canReproduce && !reproduceBtn.onclick) {
+        reproduceBtn.onclick = () => this.handleReproduction();
+      }
+    }
+  }
+
+  // Handle reproduction trigger
+  private handleReproduction(): void {
+    const player = this.entityManager.playerCell;
+    if (!player || !player.canReproduce()) return;
+
+    // Calculate DNA points
+    const dnaPoints = player.survivalTime * 0.1 + this.entityManager.glucoseCollected * 0.05;
+    player.genome.dnaPoints += dnaPoints;
+
+    // Show generation report
+    this.uiController.showGenerationReport({
+      generation: player.genome.lineage.generation + 1,
+      survivalTime: player.survivalTime,
+      resourcesCollected: this.entityManager.glucoseCollected,
+      mutations: player.genome.lineage.mutations,
+      dnaPointsEarned: dnaPoints,
+    });
+
+    // Wait for user to continue, then reproduction happens in the callback
+    if (this.pendingModifications) {
+      this.entityManager.reproducePlayer(this.pendingModifications);
+      this.pendingModifications = null;
+    } else {
+      // Auto-reproduce with no modifications
+      this.entityManager.reproducePlayer();
     }
   }
 

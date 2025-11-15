@@ -108,6 +108,35 @@
         font-family: monospace;
         margin: 0 2px;
       }
+
+      .reproduce-button {
+        width: 100%;
+        margin-top: 15px;
+        padding: 12px;
+        background: linear-gradient(135deg, #4CAF50, #2E7D32);
+        border: 2px solid #4CAF50;
+        border-radius: 8px;
+        color: white;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s;
+        animation: pulse 2s infinite;
+      }
+
+      .reproduce-button:hover {
+        background: linear-gradient(135deg, #45a049, #1b5e20);
+        transform: scale(1.05);
+      }
+
+      @keyframes pulse {
+        0%, 100% {
+          box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+        }
+        50% {
+          box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+        }
+      }
     </style>
   </head>
   <body>
@@ -137,14 +166,28 @@
         </div>
 
         <div class="stat">
-          <span class="stat-label">Position:</span>
-          <span class="stat-value" id="position-value">0, 0</span>
+          <span class="stat-label">Amino Acids:</span>
+          <span class="stat-value" id="aminoacid-value">0</span>
+        </div>
+
+        <div class="stat">
+          <span class="stat-label">Phosphates:</span>
+          <span class="stat-value" id="phosphate-value">0</span>
         </div>
 
         <div class="stat">
           <span class="stat-label">Generation:</span>
           <span class="stat-value" id="generation-value">1</span>
         </div>
+
+        <div class="stat">
+          <span class="stat-label">DNA Points:</span>
+          <span class="stat-value" id="dna-value">0</span>
+        </div>
+
+        <button id="reproduce-btn" class="reproduce-button" style="display: none;">
+          🧬 Reproduce!
+        </button>
       </div>
 
       <div id="instructions">
