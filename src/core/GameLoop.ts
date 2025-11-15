@@ -16,6 +16,8 @@ import { BiomeRenderer } from '../rendering/BiomeRenderer';
 import { DayNightCycle } from '../environment/DayNightCycle';
 import { Genome } from '../genetics/Genome';
 import { MusicManager } from '../audio/MusicManager';
+import { AchievementSystem } from '../achievements/AchievementSystem';
+import type { Achievement } from '../achievements/AchievementSystem';
 
 export class GameLoop {
   private renderer: PixiApp;
@@ -29,6 +31,7 @@ export class GameLoop {
   private biomeRenderer: BiomeRenderer;
   private dayNightCycle: DayNightCycle;
   private musicManager: MusicManager;
+  private achievementSystem: AchievementSystem;
   private lastTime = 0;
   private isRunning = false;
   private animationFrameId: number | null = null;
@@ -36,6 +39,11 @@ export class GameLoop {
   private lastAutoSave = 0;
   private autoSaveInterval = Config.AUTO_SAVE_INTERVAL_MINUTES * 60 * 1000;
   private currentSettings: GameSettings;
+  private survivalTimeTracker = 0;
+  private totalKills = 0;
+  private carnivoreKills = 0;
+  private visitedBiomes: Set<string> = new Set();
+  private totalGlucoseCollected = 0;
 
   constructor() {
     this.renderer = new PixiApp();
@@ -49,7 +57,13 @@ export class GameLoop {
     this.biomeRenderer = new BiomeRenderer(this.biomeGenerator);
     this.dayNightCycle = new DayNightCycle(Config.DAY_NIGHT_START_TIME, Config.DAY_NIGHT_SPEED_MULTIPLIER);
     this.musicManager = new MusicManager();
+    this.achievementSystem = new AchievementSystem();
     this.currentSettings = this.saveSystem.getDefaultSettings();
+
+    // Setup achievement unlock callback
+    this.achievementSystem.onAchievementUnlocked((achievement) => {
+      this.uiController.showAchievementNotification(achievement);
+    });
 
     // Setup UI callbacks
     this.setupUICallbacks();
@@ -98,6 +112,17 @@ export class GameLoop {
     this.uiController.setRestartCallback(() => {
       this.resetGame();
     });
+
+    this.uiController.setAchievementsCallback(() => {
+      this.showAchievementsPanel();
+    });
+  }
+
+  private showAchievementsPanel(): void {
+    this.uiController.showAchievements(
+      this.achievementSystem.getAllAchievements(),
+      this.achievementSystem.getAllChallenges()
+    );
   }
 
   async initialize(): Promise<void> {
@@ -108,6 +133,12 @@ export class GameLoop {
 
     // Initialize music manager
     await this.musicManager.initialize();
+
+    // Load achievement progress
+    const achievementData = await this.saveSystem.loadAchievements();
+    if (achievementData) {
+      this.achievementSystem.importProgress(achievementData);
+    }
 
     // Add biome layer to renderer (underneath entities)
     this.renderer.addBiomeLayer(this.biomeRenderer.getContainer());
@@ -203,6 +234,12 @@ export class GameLoop {
         player.applyForce(direction, Config.ACCELERATION);
       }
     }
+
+    // Update achievement tracking
+    this.updateAchievements(deltaTime);
+
+    // Apply environmental hazards
+    this.applyEnvironmentalHazards(deltaTime);
 
     // Update all entities
     this.entityManager.update(deltaTime);
@@ -305,6 +342,142 @@ export class GameLoop {
     if (closestThreatDistance === Infinity) return 0;
 
     return Math.max(0, 1 - (closestThreatDistance / maxDetectionRange));
+  }
+
+  private updateAchievements(deltaTime: number): void {
+    const player = this.entityManager.playerCell;
+    if (!player) return;
+
+    // Track survival time
+    this.survivalTimeTracker += deltaTime;
+    this.achievementSystem.trackProgress('first_steps', this.survivalTimeTracker);
+    this.achievementSystem.trackProgress('survivor', this.survivalTimeTracker);
+    this.achievementSystem.trackProgress('endurance_master', this.survivalTimeTracker);
+    this.achievementSystem.trackProgress('immortal', this.survivalTimeTracker);
+
+    // Track generation
+    const generation = player.genome.lineage.generation;
+    this.achievementSystem.trackProgress('first_evolution', generation);
+    this.achievementSystem.trackProgress('evolution_master', generation);
+    this.achievementSystem.trackProgress('ancient_lineage', generation);
+
+    // Track DNA points
+    this.achievementSystem.trackProgress('gene_collector', player.genome.dnaPoints);
+
+    // Track glucose collected
+    this.totalGlucoseCollected = this.entityManager.glucoseCollected;
+    this.achievementSystem.trackProgress('resource_collector', this.totalGlucoseCollected);
+    this.achievementSystem.trackProgress('hoarder', this.totalGlucoseCollected);
+
+    // Track biomes visited
+    const currentBiome = this.biomeGenerator.getBiomeAt(player.position.x, player.position.y);
+    if (!this.visitedBiomes.has(currentBiome.type)) {
+      this.visitedBiomes.add(currentBiome.type);
+      this.achievementSystem.trackProgress('explorer', this.visitedBiomes.size);
+      this.achievementSystem.trackProgress('world_traveler', this.visitedBiomes.size);
+    }
+
+    // Track trait achievements
+    this.achievementSystem.trackProgress('speed_demon', player.traits.speed);
+    this.achievementSystem.trackProgress('tank_build', player.traits.armor);
+    this.achievementSystem.trackProgress('giant', player.traits.size);
+    this.achievementSystem.trackProgress('genius', player.traits.intelligence);
+
+    // Track perfect specimen (5 traits at max)
+    const maxTraitCount = [
+      player.traits.speed,
+      player.traits.armor,
+      player.traits.size,
+      player.traits.intelligence,
+      player.traits.metabolism,
+    ].filter(t => t >= 10).length;
+    this.achievementSystem.trackProgress('perfect_specimen', maxTraitCount);
+
+    // Track close call achievement
+    const healthPercent = player.traits.health / player.traits.maxHealth;
+    if (healthPercent < 0.05 && healthPercent > 0) {
+      this.achievementSystem.incrementProgress('close_call', 1);
+    }
+
+    // Pacifist achievement - check if reached gen 5 with 0 kills
+    if (generation >= 5 && this.totalKills === 0) {
+      this.achievementSystem.trackProgress('pacifist', generation);
+    }
+  }
+
+  // Call this when player kills another cell
+  public trackKill(victimSize: number, victimType: string): void {
+    this.totalKills++;
+    this.achievementSystem.incrementProgress('first_kill', 1);
+    this.achievementSystem.incrementProgress('predator', 1);
+    this.achievementSystem.incrementProgress('apex_predator', 1);
+
+    if (victimType === 'carnivore') {
+      this.carnivoreKills++;
+      this.achievementSystem.incrementProgress('carnivore_hunter', 1);
+    }
+
+    // Check underdog achievement
+    const player = this.entityManager.playerCell;
+    if (player && victimSize > player.traits.size * 2) {
+      this.achievementSystem.incrementProgress('underdog', 1);
+    }
+  }
+
+  private applyEnvironmentalHazards(deltaTime: number): void {
+    const player = this.entityManager.playerCell;
+    if (!player) return;
+
+    const biome = this.biomeGenerator.getBiomeAt(player.position.x, player.position.y);
+
+    for (const hazard of biome.hazards) {
+      switch (hazard.type) {
+        case 'current':
+          // Apply current force to push player
+          if (hazard.direction) {
+            const currentForce = hazard.intensity * 50 * deltaTime;
+            player.applyForce(hazard.direction, currentForce);
+          }
+          break;
+
+        case 'temperature':
+          // Extreme temperatures cause damage over time
+          // Damage scales with intensity and is reduced by armor
+          const tempDamage = hazard.intensity * 2 * deltaTime;
+          const armorReduction = player.traits.armor * 0.1;
+          const finalTempDamage = Math.max(0, tempDamage - armorReduction);
+          player.traits.health -= finalTempDamage;
+          break;
+
+        case 'oxygen':
+          // Low oxygen reduces ATP regeneration
+          // Reduces effectiveness of metabolism
+          const oxygenPenalty = hazard.intensity * 0.5;
+          const atpDrain = oxygenPenalty * player.traits.metabolism * deltaTime;
+          player.traits.atp = Math.max(0, player.traits.atp - atpDrain);
+          break;
+
+        case 'radiation':
+          // Radiation causes gradual health damage
+          const radiationDamage = hazard.intensity * 1.5 * deltaTime;
+          const radiationArmorReduction = player.traits.armor * 0.05;
+          const finalRadDamage = Math.max(0, radiationDamage - radiationArmorReduction);
+          player.traits.health -= finalRadDamage;
+          break;
+
+        case 'pressure':
+          // High pressure slows movement and causes damage
+          // Speed penalty (applied as reduced effectiveness)
+          const pressurePenalty = hazard.intensity * 0.3;
+
+          // Pressure damage (armor helps significantly)
+          const pressureDamage = hazard.intensity * 1 * deltaTime;
+          const pressureArmorReduction = player.traits.armor * 0.15;
+          const finalPressureDamage = Math.max(0, pressureDamage - pressureArmorReduction);
+          player.traits.health -= finalPressureDamage;
+          break;
+      }
+    }
   }
 
   // Render game
@@ -594,14 +767,27 @@ export class GameLoop {
         this.historyTracker.getCurrentGeneration(),
         this.saveSystem.getDefaultSettings()
       );
+
+      // Save achievement progress
+      const achievementData = this.achievementSystem.exportProgress();
+      await this.saveSystem.saveAchievements(achievementData);
     } catch (error) {
       console.error('Auto-save failed:', error);
     }
   }
 
   // Dispose resources
-  dispose(): void {
+  async dispose(): Promise<void> {
     this.stop();
+
+    // Save achievement progress before disposing
+    try {
+      const achievementData = this.achievementSystem.exportProgress();
+      await this.saveSystem.saveAchievements(achievementData);
+    } catch (error) {
+      console.error('Failed to save achievements on exit:', error);
+    }
+
     this.entityManager.dispose();
     this.renderer.dispose();
     this.inputHandler.dispose();

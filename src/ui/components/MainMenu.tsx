@@ -7,6 +7,7 @@ interface MainMenuProps {
   onTutorial: () => void;
   onExportHistory: () => void;
   onToggleStats: () => void;
+  onAchievements: () => void;
   showStats: boolean;
 }
 
@@ -17,6 +18,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onTutorial,
   onExportHistory,
   onToggleStats,
+  onAchievements,
   showStats,
 }) => {
   return (
@@ -91,6 +93,22 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             }}
           >
             💾 Load/Save
+          </button>
+
+          <button
+            onClick={onAchievements}
+            style={{
+              padding: '10px 15px',
+              background: '#f59e0b',
+              color: '#000',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              fontSize: '14px',
+            }}
+          >
+            🏆 Achievements
           </button>
 
           <button

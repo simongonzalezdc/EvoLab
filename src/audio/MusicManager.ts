@@ -312,6 +312,21 @@ export class MusicManager {
       case BiomeType.BARREN:
         return ['C3', 'Eb3', 'F3', 'Ab3', 'C4']; // Sparse, minor
 
+      case BiomeType.VOLCANIC:
+        return ['D3', 'F#3', 'A3', 'C4', 'E4', 'F#4']; // Intense, aggressive
+
+      case BiomeType.FROZEN:
+        return ['C3', 'Eb3', 'Gb3', 'Ab3', 'C4', 'Eb4']; // Cold, sparse, diminished
+
+      case BiomeType.SWAMP:
+        return ['C3', 'D3', 'Eb3', 'G3', 'Ab3', 'Bb3']; // Murky, blues-like
+
+      case BiomeType.CRYSTAL:
+        return ['C3', 'E3', 'F#3', 'G#3', 'B3', 'C4', 'E4']; // Bright, crystalline
+
+      case BiomeType.ABYSS:
+        return ['C2', 'Db2', 'Eb2', 'Gb2', 'Ab2', 'C3']; // Very low, dark, dissonant
+
       default:
         return ['C3', 'E3', 'G3', 'B3'];
     }
@@ -323,6 +338,16 @@ export class MusicManager {
     switch (this.currentState.biome) {
       case BiomeType.TOXIC:
         return isDeep ? 'C#1' : 'C#2';
+      case BiomeType.VOLCANIC:
+        return 'D1'; // Powerful, deep
+      case BiomeType.FROZEN:
+        return 'C1'; // Very low and cold
+      case BiomeType.SWAMP:
+        return 'C1'; // Deep murky drone
+      case BiomeType.CRYSTAL:
+        return 'C2'; // Higher, crystalline
+      case BiomeType.ABYSS:
+        return 'C0'; // Extremely deep
       default:
         return isDeep ? 'C1' : 'C2';
     }
@@ -347,6 +372,21 @@ export class MusicManager {
 
       case BiomeType.TOXIC:
         return ['C4', 'Db4', 'E4', 'F4', 'G4', 'Ab4', 'B4']; // C Altered (tense)
+
+      case BiomeType.VOLCANIC:
+        return ['D4', 'E4', 'F#4', 'G4', 'A4', 'C5', 'D5']; // D Major (bright, aggressive)
+
+      case BiomeType.FROZEN:
+        return ['C4', 'Db4', 'Eb4', 'Gb4', 'Ab4', 'Bb4']; // Whole tone (ethereal, frozen)
+
+      case BiomeType.SWAMP:
+        return ['C4', 'Eb4', 'F4', 'Gb4', 'G4', 'Bb4']; // Blues scale (murky)
+
+      case BiomeType.CRYSTAL:
+        return ['C4', 'D4', 'E4', 'F#4', 'G#4', 'A#4', 'B4', 'C5']; // C Lydian Augmented (bright, shimmering)
+
+      case BiomeType.ABYSS:
+        return ['C4', 'Db4', 'Eb4', 'Fb4', 'Gb4', 'Ab4']; // Diminished (dark, oppressive)
 
       default:
         return ['C4', 'D4', 'E4', 'G4', 'A4', 'C5']; // Pentatonic
