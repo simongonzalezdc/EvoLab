@@ -7,11 +7,18 @@ import { Config } from './Config';
 import { UIController } from '../ui/UIController';
 import type { Traits } from '../types/entities';
 
+import { BiomeGenerator } from '../environment/BiomeGenerator';
+import { BiomeRenderer } from '../rendering/BiomeRenderer';
+import { DayNightCycle } from '../environment/DayNightCycle';
+
 export class GameLoop {
   private renderer: PixiApp;
   private inputHandler: InputHandler;
   private entityManager: EntityManager;
   private uiController: UIController;
+  private biomeGenerator: BiomeGenerator;
+  private biomeRenderer: BiomeRenderer;
+  private dayNightCycle: DayNightCycle;
   private lastTime = 0;
   private isRunning = false;
   private isPaused = false;
@@ -23,6 +30,9 @@ export class GameLoop {
     this.inputHandler = new InputHandler();
     this.entityManager = new EntityManager(this.renderer);
     this.uiController = new UIController();
+    this.biomeGenerator = new BiomeGenerator(Config.LAKE_WIDTH, Config.LAKE_HEIGHT);
+    this.biomeRenderer = new BiomeRenderer(this.biomeGenerator);
+    this.dayNightCycle = new DayNightCycle(12, 10); // Start at noon, 10x speed
 
     // Setup UI callbacks
     this.setupUICallbacks();
@@ -51,6 +61,9 @@ export class GameLoop {
 
     // Initialize renderer
     await this.renderer.initialize();
+
+    // Add biome layer to renderer (underneath entities)
+    this.renderer.addBiomeLayer(this.biomeRenderer.getContainer());
 
     // Create player cell
     this.entityManager.createPlayerCell();
@@ -100,6 +113,9 @@ export class GameLoop {
 
   // Update game state
   private update(deltaTime: number): void {
+    // Update day/night cycle
+    this.dayNightCycle.update(deltaTime);
+
     // Handle player input
     const player = this.entityManager.playerCell;
     if (player) {
@@ -115,7 +131,19 @@ export class GameLoop {
     // Update camera to follow player
     if (player) {
       this.renderer.updateCamera(player.position.x, player.position.y);
+
+      // Update biome rendering around camera
+      this.biomeRenderer.render(
+        player.position.x,
+        player.position.y,
+        Config.CANVAS_WIDTH,
+        Config.CANVAS_HEIGHT
+      );
     }
+
+    // Update lighting based on day/night
+    const lightLevel = this.dayNightCycle.getLightLevel();
+    this.biomeRenderer.updateLighting(lightLevel);
 
     // Update HUD
     this.updateHUD();
@@ -176,6 +204,23 @@ export class GameLoop {
     const dnaValue = document.getElementById('dna-value');
     if (dnaValue) {
       dnaValue.textContent = Math.floor(player.genome.dnaPoints).toString();
+    }
+
+    // Update Time of Day
+    const timeValue = document.getElementById('time-value');
+    if (timeValue) {
+      const time = this.dayNightCycle.getTime();
+      const hours = Math.floor(time);
+      const minutes = Math.floor((time % 1) * 60);
+      timeValue.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    }
+
+    // Update Population
+    const populationValue = document.getElementById('population-value');
+    if (populationValue) {
+      const stats = this.entityManager.getPopulationStats();
+      const total = Object.values(stats).reduce((a, b) => a + b, 0);
+      populationValue.textContent = total.toString();
     }
 
     // Update Reproduction Button

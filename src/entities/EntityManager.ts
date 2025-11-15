@@ -7,6 +7,8 @@ import { Config } from '../core/Config';
 import { Genome } from '../genetics/Genome';
 import { ReproductionSystem } from '../genetics/ReproductionSystem';
 import { TraitSystem } from '../genetics/TraitSystem';
+import { PopulationManager } from '../ai/PopulationManager';
+import { CombatSystem } from './CombatSystem';
 
 export class EntityManager {
   private cells: Map<string, Cell> = new Map();
@@ -15,10 +17,17 @@ export class EntityManager {
   public playerCell: Cell | null = null;
   public glucoseCollected = 0;
   public reproductionSystem: ReproductionSystem;
+  public populationManager: PopulationManager;
+  public combatSystem: CombatSystem;
 
   constructor(renderer: PixiApp) {
     this.renderer = renderer;
     this.reproductionSystem = new ReproductionSystem();
+    this.populationManager = new PopulationManager(renderer, Config.LAKE_WIDTH, Config.LAKE_HEIGHT);
+    this.combatSystem = new CombatSystem();
+
+    // Initialize AI species
+    this.populationManager.initializeDefaultSpecies();
   }
 
   // Create player cell from genome
@@ -70,20 +79,30 @@ export class EntityManager {
 
   // Update all entities
   update(deltaTime: number): void {
-    // Update cells
-    this.cells.forEach(cell => {
+    // Update player cell
+    if (this.playerCell) {
+      this.playerCell.update(deltaTime);
+      this.checkResourceCollection(this.playerCell);
+    }
+
+    // Update AI population
+    const allCells = this.getAllCells();
+    const allResources = Array.from(this.resources.values());
+    this.populationManager.update(deltaTime, allCells, allResources);
+
+    // Update AI cell physics
+    const aiCells = this.populationManager.getAllCells();
+    aiCells.forEach(cell => {
       cell.update(deltaTime);
     });
+
+    // Check combat between all cells
+    this.combatSystem.checkCombat(allCells);
 
     // Update resources
     this.resources.forEach(resource => {
       resource.update(deltaTime, Config.GLUCOSE_RESPAWN_TIME);
     });
-
-    // Check for resource collection
-    if (this.playerCell) {
-      this.checkResourceCollection(this.playerCell);
-    }
   }
 
   // Check if player is close enough to collect resources
@@ -143,6 +162,13 @@ export class EntityManager {
     return newCell;
   }
 
+  // Get all cells (player + AI)
+  getAllCells(): Cell[] {
+    const playerCells = Array.from(this.cells.values());
+    const aiCells = this.populationManager.getAllCells();
+    return [...playerCells, ...aiCells];
+  }
+
   // Get all cells
   getCells(): Cell[] {
     return Array.from(this.cells.values());
@@ -153,9 +179,17 @@ export class EntityManager {
     return Array.from(this.resources.values());
   }
 
+  // Get population stats
+  getPopulationStats(): { [key: string]: number } {
+    const stats = this.populationManager.getStats();
+    stats['Player'] = this.playerCell ? 1 : 0;
+    return stats;
+  }
+
   dispose(): void {
     this.cells.forEach(cell => cell.dispose());
     this.resources.forEach(resource => resource.dispose());
+    this.populationManager.dispose();
     this.cells.clear();
     this.resources.clear();
   }

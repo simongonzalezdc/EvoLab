@@ -6,6 +6,7 @@ import { Config } from '../core/Config';
 export class PixiApp {
   public app: Application;
   public worldContainer: Container;
+  private biomeLayer: Container | null = null;
   private isInitialized = false;
 
   constructor() {
@@ -42,6 +43,12 @@ export class PixiApp {
 
     this.isInitialized = true;
     console.log('PixiJS initialized');
+  }
+
+  // Add biome layer underneath entities
+  addBiomeLayer(biomeContainer: Container): void {
+    this.biomeLayer = biomeContainer;
+    this.worldContainer.addChildAt(biomeContainer, 0); // Add at bottom
   }
 
   // Update camera to follow target position
