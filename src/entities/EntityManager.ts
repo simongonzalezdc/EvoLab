@@ -11,6 +11,7 @@ import { TraitSystem } from '../genetics/TraitSystem';
 import { PopulationManager, type AISpeciesSetup } from '../ai/PopulationManager';
 import { CombatSystem } from './CombatSystem';
 import { PlayerSpeciesManager } from '../core/PlayerSpeciesManager';
+import { SoundManager } from '../audio/SoundManager';
 import type { Traits } from '../types/entities';
 
 export class EntityManager {
@@ -18,6 +19,7 @@ export class EntityManager {
   private resources: Map<string, Resource> = new Map();
   private renderer: PixiApp;
   private biomeGenerator: BiomeGenerator;
+  private soundManager: SoundManager | null = null;
   public playerCell: Cell | null = null; // Keep for backward compatibility, but deprecated
   public playerSpecies: PlayerSpeciesManager | null = null;
   public glucoseCollected = 0;
@@ -48,6 +50,10 @@ export class EntityManager {
     } else {
       this.populationManager.initializeDefaultSpecies();
     }
+  }
+
+  setSoundManager(soundManager: SoundManager): void {
+    this.soundManager = soundManager;
   }
 
   // Create player species from genome
@@ -196,13 +202,22 @@ export class EntityManager {
 
             // Check for combo bonus!
             const combo = this.checkCombo(currentTime, player);
-            if (combo.isCombo && Config.DEBUG_GAME_LOOP) {
-              console.log(`🔥 COMBO x${combo.comboSize}! Bonus DNA awarded!`);
+            if (combo.isCombo) {
+              // Play combo sound!
+              this.soundManager?.playCombo(combo.comboSize);
+              if (Config.DEBUG_GAME_LOOP) {
+                console.log(`🔥 COMBO x${combo.comboSize}! Bonus DNA awarded!`);
+              }
+            } else {
+              // Play regular collection sound
+              this.soundManager?.play('collect');
             }
           } else if (resource.type === 'aminoAcid') {
             player.collectCompound('aminoAcid', 3);
+            this.soundManager?.play('collect');
           } else if (resource.type === 'phosphate') {
             player.collectCompound('phosphate', 2);
+            this.soundManager?.play('collect');
           }
         }
       }

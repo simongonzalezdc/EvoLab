@@ -96,6 +96,12 @@ export const Config = {
   // Save system settings
   AUTO_SAVE_INTERVAL_MINUTES: 5, // Auto-save every 5 minutes
 
+  // Sound effects settings
+  SOUND_EFFECTS_ENABLED: true, // Enable sound effects by default
+  SOUND_EFFECTS_VOLUME: 0.5, // Volume 0-1
+  DANGER_SOUND_THRESHOLD: 150, // Distance threshold for danger sounds
+  LOW_ATP_WARNING_THRESHOLD: 0.2, // Play warning at 20% ATP
+
   // Reproduction requirements
   REPRODUCTION_ATP_THRESHOLD: 70, // % of max ATP required
   REPRODUCTION_GLUCOSE_REQUIRED: 50,
