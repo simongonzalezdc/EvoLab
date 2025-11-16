@@ -15,6 +15,7 @@ import type { GameSetupOptions } from '../types/game';
 import { BiomeGenerator } from '../environment/BiomeGenerator';
 import { BiomeRenderer } from '../rendering/BiomeRenderer';
 import { DayNightCycle } from '../environment/DayNightCycle';
+import { EnvironmentalEffects } from '../rendering/EnvironmentalEffects';
 import { Genome } from '../genetics/Genome';
 import { MusicManager } from '../audio/MusicManager';
 import { AchievementSystem } from '../achievements/AchievementSystem';
@@ -102,6 +103,7 @@ export class GameLoop {
   private biomeGenerator: BiomeGenerator;
   private biomeRenderer: BiomeRenderer;
   private dayNightCycle: DayNightCycle;
+  private environmentalEffects: EnvironmentalEffects;
   private musicManager: MusicManager;
   private achievementSystem: AchievementSystem;
   private evolutionSystems: EvolutionSystemsManager;
@@ -138,6 +140,7 @@ export class GameLoop {
     this.uiController = new UIController(this.timeControl, this.saveSystem);
     this.biomeRenderer = new BiomeRenderer(this.biomeGenerator);
     this.dayNightCycle = new DayNightCycle(Config.DAY_NIGHT_START_TIME, Config.DAY_NIGHT_SPEED_MULTIPLIER);
+    this.environmentalEffects = new EnvironmentalEffects(this.renderer.particleSystem);
     this.musicManager = new MusicManager();
     this.achievementSystem = new AchievementSystem();
     this.evolutionSystems = new EvolutionSystemsManager({
@@ -437,6 +440,9 @@ export class GameLoop {
     // Spawn resources
     this.entityManager.spawnResources();
 
+    // Initialize mini-map
+    this.renderer.initializeMiniMap(this.biomeGenerator);
+
     // Show tutorial on first launch
     const hasSeenTutorial = localStorage.getItem('evolab_tutorial_seen');
     if (!hasSeenTutorial) {
@@ -558,6 +564,26 @@ export class GameLoop {
     // Update lighting based on day/night
     const lightLevel = this.dayNightCycle.getLightLevel();
     this.biomeRenderer.updateLighting(lightLevel);
+
+    // Update particle system
+    this.renderer.updateParticles(deltaTime);
+
+    // Update environmental effects based on current view
+    if (this.entityManager.playerSpecies) {
+      const speciesCenter = this.entityManager.playerSpecies.getCenterPosition();
+      const { width: viewWidth, height: viewHeight } = this.renderer.getWorldViewSize();
+      this.environmentalEffects.update(
+        deltaTime,
+        speciesCenter.x,
+        speciesCenter.y,
+        viewWidth,
+        viewHeight,
+        (x, y) => this.biomeGenerator.getBiomeAt(x, y)
+      );
+
+      // Update mini-map
+      this.renderer.updateMiniMap(speciesCenter.x, speciesCenter.y);
+    }
 
     // Update music based on game state
     this.updateMusic();

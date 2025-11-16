@@ -106,6 +106,10 @@ export class BiomeRenderer {
     // Draw tile with biome color - Use local coordinates (0,0) and position via x/y
     tile.rect(0, 0, this.tileSize, this.tileSize); // Draw at local coordinates
     tile.fill({ color: biome.color, alpha });
+
+    // Add texture overlay pattern based on biome type
+    this.addTexturePattern(tile, biome.type, x, y);
+
     if (outlineWidth > 0) {
       tile.stroke({ color: outlineColor, width: outlineWidth, alpha: 0.8 });
     }
@@ -118,8 +122,110 @@ export class BiomeRenderer {
     if (Config.DEBUG_BIOME_RENDERER) {
       console.log(`[BiomeRenderer] Tile (${x},${y}) added for biome ${biome.type}`);
     }
-    
+
     this.tiles.set(`${x},${y}`, tile);
+  }
+
+  // Add texture pattern overlay to tiles
+  private addTexturePattern(tile: Graphics, biomeType: string, worldX: number, worldY: number): void {
+    const size = this.tileSize;
+
+    switch (biomeType) {
+      case 'TOXIC':
+        // Toxic: diagonal lines
+        for (let i = 0; i < 3; i++) {
+          const offset = (i * size) / 3;
+          tile.moveTo(0, offset);
+          tile.lineTo(offset, 0);
+          tile.moveTo(size - offset, size);
+          tile.lineTo(size, size - offset);
+        }
+        tile.stroke({ width: 1, color: 0x9c27b0, alpha: 0.3 });
+        break;
+
+      case 'VOLCANIC':
+        // Volcanic: random cracks
+        for (let i = 0; i < 4; i++) {
+          const startX = Math.random() * size;
+          const startY = Math.random() * size;
+          const endX = startX + (Math.random() - 0.5) * size * 0.3;
+          const endY = startY + (Math.random() - 0.5) * size * 0.3;
+          tile.moveTo(startX, startY);
+          tile.lineTo(endX, endY);
+        }
+        tile.stroke({ width: 1, color: 0xff3300, alpha: 0.4 });
+        break;
+
+      case 'FROZEN':
+        // Frozen: crystalline pattern
+        tile.moveTo(size / 2, 0);
+        tile.lineTo(size / 2, size);
+        tile.moveTo(0, size / 2);
+        tile.lineTo(size, size / 2);
+        tile.moveTo(0, 0);
+        tile.lineTo(size, size);
+        tile.moveTo(size, 0);
+        tile.lineTo(0, size);
+        tile.stroke({ width: 1, color: 0xffffff, alpha: 0.2 });
+        break;
+
+      case 'CRYSTAL':
+        // Crystal: grid pattern
+        const gridSize = size / 4;
+        for (let i = 1; i < 4; i++) {
+          tile.moveTo(i * gridSize, 0);
+          tile.lineTo(i * gridSize, size);
+          tile.moveTo(0, i * gridSize);
+          tile.lineTo(size, i * gridSize);
+        }
+        tile.stroke({ width: 1, color: 0xffffff, alpha: 0.25 });
+        break;
+
+      case 'SWAMP':
+        // Swamp: organic blobs
+        for (let i = 0; i < 3; i++) {
+          const cx = Math.random() * size;
+          const cy = Math.random() * size;
+          const r = 2 + Math.random() * 3;
+          tile.circle(cx, cy, r);
+          tile.fill({ color: 0x558b2f, alpha: 0.3 });
+        }
+        break;
+
+      case 'ABYSS':
+        // Abyss: wavy lines
+        for (let i = 0; i < 2; i++) {
+          const y = (i + 1) * (size / 3);
+          tile.moveTo(0, y);
+          tile.bezierCurveTo(
+            size / 4, y - 3,
+            size * 3 / 4, y + 3,
+            size, y
+          );
+        }
+        tile.stroke({ width: 1, color: 0x000066, alpha: 0.4 });
+        break;
+
+      case 'NUTRIENT_RICH':
+        // Nutrient rich: dots pattern
+        for (let i = 0; i < 8; i++) {
+          const dx = (i % 4) * (size / 4) + size / 8;
+          const dy = Math.floor(i / 4) * (size / 2) + size / 4;
+          tile.circle(dx, dy, 1);
+          tile.fill({ color: 0x00ff00, alpha: 0.4 });
+        }
+        break;
+
+      case 'BARREN':
+        // Barren: sparse dots
+        for (let i = 0; i < 3; i++) {
+          const dx = Math.random() * size;
+          const dy = Math.random() * size;
+          tile.circle(dx, dy, 0.5);
+          tile.fill({ color: 0x666666, alpha: 0.3 });
+        }
+        break;
+    }
   }
 
   // Highlight a specific biome type (for interactive legend)
