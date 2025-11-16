@@ -173,19 +173,21 @@ export class PopulationManager {
     // Create AI behavior
     let behavior: AIBehavior;
     switch (species.behaviorType) {
-      case 'herbivore':
+      case BehaviorType.HERBIVORE:
         behavior = new HerbivoreAI(cell);
         break;
-      case 'carnivore':
+      case BehaviorType.CARNIVORE: {
         const carnivoreAI = new CarnivoreAI(cell);
         carnivoreAI.setAdvancedAI(this.advancedAI); // Inject advanced AI for pack behavior
         behavior = carnivoreAI;
         break;
-      case 'omnivore':
+      }
+      case BehaviorType.OMNIVORE:
         behavior = new OmnivoreAI(cell);
         break;
       default:
         behavior = new HerbivoreAI(cell);
+        break;
     }
 
     this.aiBehaviors.set(cell.id, behavior);

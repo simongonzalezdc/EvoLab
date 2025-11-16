@@ -169,7 +169,7 @@ export class BiomeRenderer {
         tile.stroke({ width: 1, color: 0xffffff, alpha: 0.2 });
         break;
 
-      case 'CRYSTAL':
+      case 'CRYSTAL': {
         // Crystal: grid pattern
         const gridSize = size / 4;
         for (let i = 1; i < 4; i++) {
@@ -180,6 +180,7 @@ export class BiomeRenderer {
         }
         tile.stroke({ width: 1, color: 0xffffff, alpha: 0.25 });
         break;
+      }
 
       case 'SWAMP':
         // Swamp: organic blobs
@@ -241,9 +242,16 @@ export class BiomeRenderer {
   }
 
   updateLighting(lightLevel: number): void {
-    // Adjust alpha based on light level - much higher visibility - FIX 4
-    const newAlpha = 0.7 + lightLevel * 0.3; // 0.7-1.0 range - always very visible
-    console.log(`[BiomeRenderer] updateLighting: lightLevel=${lightLevel}, setting container alpha to ${newAlpha}`);
+    // Normalize light level (BiomeGenerator returns 0-100)
+    const normalizedLight = Math.max(0, Math.min(1, lightLevel / 100));
+    const newAlpha = 0.4 + normalizedLight * 0.6; // Keep alpha between 0.4-1.0
+
+    if (Config.DEBUG_BIOME_RENDERER) {
+      console.log(
+        `[BiomeRenderer] updateLighting: lightLevel=${lightLevel} (normalized=${normalizedLight.toFixed(2)}), alpha=${newAlpha.toFixed(2)}`
+      );
+    }
+
     this.container.alpha = newAlpha;
   }
 
