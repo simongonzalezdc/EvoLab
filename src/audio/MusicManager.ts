@@ -138,20 +138,20 @@ export class MusicManager {
   private ambientSynth: Tone.PolySynth;
   private bassDrone: Tone.Synth;
   private melodySynth: Tone.Synth;
-  private padSynth: Tone.PolySynth;
   private rhythmSynth: Tone.NoiseSynth;
 
   // Per-synth channels for effects
   private ambientChannel: Tone.Channel;
   private bassChannel: Tone.Channel;
   private melodyChannel: Tone.Channel;
-  private padChannel: Tone.Channel;
   private rhythmChannel: Tone.Channel;
 
   // Effects
   private reverb: Tone.Reverb;
+  private ambientReverb: Tone.Reverb;
   private filter: Tone.Filter;
   private delay: Tone.FeedbackDelay;
+  private rhythmDelay: Tone.FeedbackDelay;
 
   // Presets
   private presets: MusicPreset[] = [];
@@ -160,7 +160,6 @@ export class MusicManager {
   private ambientLoop: Tone.Loop | null = null;
   private melodyLoop: Tone.Loop | null = null;
   private bassLoop: Tone.Loop | null = null;
-  private padLoop: Tone.Loop | null = null;
   private rhythmLoop: Tone.Loop | null = null;
   private ambientChordSeed = 0;
   private lastMelodyIndex = 0; // Track last melody note for stepwise motion
@@ -184,6 +183,12 @@ export class MusicManager {
       wet: 0.25,
     });
 
+    // Separate reverb for ambient track with 50% wet
+    this.ambientReverb = new Tone.Reverb({
+      decay: 3,
+      wet: 0.5,
+    });
+
     this.filter = new Tone.Filter({
       frequency: 2000,
       type: 'lowpass',
@@ -196,11 +201,18 @@ export class MusicManager {
       wet: 0.2,
     });
 
+    // Separate delay for rhythm track
+    this.rhythmDelay = new Tone.FeedbackDelay({
+      delayTime: '8n',
+      feedback: 0.2,
+      wet: 0.3,
+    });
+
     // Create per-synth channels with balanced volumes
-    this.ambientChannel = new Tone.Channel({ volume: -6 }).toDestination();
+    // Ambient volume reduced by 25%: -6dB -> -9dB (approximately -8.5dB for exact 25% reduction)
+    this.ambientChannel = new Tone.Channel({ volume: -9 }).toDestination();
     this.bassChannel = new Tone.Channel({ volume: -8 }).toDestination();
     this.melodyChannel = new Tone.Channel({ volume: -10 }).toDestination();
-    this.padChannel = new Tone.Channel({ volume: -15 }).toDestination();
     this.rhythmChannel = new Tone.Channel({ volume: -18 }).toDestination();
 
     // Create synths
@@ -231,16 +243,6 @@ export class MusicManager {
         decay: 0.3,
         sustain: 0.4,
         release: 0.8,
-      },
-    });
-
-    this.padSynth = new Tone.PolySynth(Tone.Synth, {
-      oscillator: { type: 'sawtooth' },
-      envelope: {
-        attack: 3,
-        decay: 2,
-        sustain: 0.7,
-        release: 4,
       },
     });
 
@@ -320,10 +322,10 @@ export class MusicManager {
 
   private setupAudioGraph(): void {
     // Connect synths through channels for per-layer effects
-    // Ambient synth -> channel -> reverb -> filter -> master
+    // Ambient synth -> channel -> ambientReverb (50% wet) -> filter -> master
     this.ambientSynth.connect(this.ambientChannel);
-    this.ambientChannel.connect(this.reverb);
-    this.reverb.connect(this.filter);
+    this.ambientChannel.connect(this.ambientReverb);
+    this.ambientReverb.connect(this.filter);
     this.filter.connect(this.masterVolume);
 
     // Bass drone -> channel -> master (dry, deep)
@@ -335,17 +337,14 @@ export class MusicManager {
     this.melodyChannel.connect(this.delay);
     this.delay.connect(this.reverb);
 
-    // Pad -> channel -> reverb -> master
-    this.padSynth.connect(this.padChannel);
-    this.padChannel.connect(this.reverb);
-
-    // Rhythm -> channel -> filter -> master (dry, percussive)
+    // Rhythm -> channel -> rhythmDelay -> filter -> master (with delay for depth)
     this.rhythmSynth.connect(this.rhythmChannel);
-    this.rhythmChannel.connect(this.filter);
+    this.rhythmChannel.connect(this.rhythmDelay);
+    this.rhythmDelay.connect(this.filter);
     this.filter.connect(this.masterVolume);
 
     // Volumes are already set in channel creation
-    // Ambient: -6dB, Bass: -8dB, Melody: -10dB, Pad: -15dB, Rhythm: -18dB
+    // Ambient: -9dB (reduced by 25%), Bass: -8dB, Melody: -10dB, Rhythm: -18dB
   }
 
   async initialize(): Promise<void> {
@@ -356,13 +355,14 @@ export class MusicManager {
       // Modern browsers require user interaction for audio
       const startPromise = Tone.start();
       const reverbPromise = this.reverb.generate();
+      const ambientReverbPromise = this.ambientReverb.generate();
       
       // Set a timeout to avoid hanging
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error('Audio initialization timeout')), 2000);
       });
       
-      await Promise.race([startPromise, reverbPromise, timeoutPromise]);
+      await Promise.race([startPromise, reverbPromise, ambientReverbPromise, timeoutPromise]);
       this.isInitialized = true;
       console.log('MusicManager: Audio initialized successfully');
     } catch (error) {
@@ -386,6 +386,7 @@ export class MusicManager {
       try {
         await Tone.start();
         await this.reverb.generate();
+        await this.ambientReverb.generate();
         this.isInitialized = true;
         console.log('MusicManager: Audio initialized on user interaction');
       } catch (error) {
@@ -439,7 +440,6 @@ export class MusicManager {
     this.createAmbientLoop();  // Starts at 0 (immediately)
     this.createBassLoop();     // First note at @1m, loop at @4m
     this.createMelodyLoop();   // Starts at @2m
-    this.createPadLoop();      // Starts at 0 (immediately)
     this.createRhythmLoop();   // Starts at 0 (16th note grid)
   }
 
@@ -448,14 +448,12 @@ export class MusicManager {
     this.ambientLoop?.stop();
     this.melodyLoop?.stop();
     this.bassLoop?.stop();
-    this.padLoop?.stop();
     this.rhythmLoop?.stop();
 
     // Release all notes
     this.ambientSynth.releaseAll();
     this.melodySynth.triggerRelease();
     this.bassDrone.triggerRelease();
-    this.padSynth.releaseAll();
 
     // Clear all scheduled events from Transport
     Tone.Transport.cancel();
@@ -563,37 +561,6 @@ export class MusicManager {
 
     // Start melody at measure 2 to let ambient establish first
     this.melodyLoop.start('@2m');
-  }
-
-  private createPadLoop(): void {
-    const notes = this.getBiomeAmbientNotes();
-
-    this.padLoop?.stop();
-    this.padLoop = new Tone.Loop((time: number) => {
-      if (!this.isEnabled) return;
-
-      // Pad plays very slow, sustained power chords for atmosphere
-      // Power chord: root + fifth (2 notes only for clarity)
-      if (notes.length >= 2) {
-        const root = notes[0];
-        const fifth = notes[Math.min(4, notes.length - 1)]; // Fifth, or closest available
-
-        const chord = [root, fifth].filter((n): n is string => n !== undefined && n !== root || n === root);
-
-        // Ensure we have exactly 2 distinct notes
-        const uniqueChord = Array.from(new Set(chord));
-        if (uniqueChord.length >= 1) {
-          // Pad with root if only 1 note available
-          const finalChord = uniqueChord.length === 1 ? [uniqueChord[0]!, uniqueChord[0]!] : uniqueChord.slice(0, 2);
-
-          // Very long sustained notes (2 measures) - triggered at exact scheduled time
-          this.padSynth.triggerAttackRelease(finalChord, '2m', time);
-        }
-      }
-    }, '2m'); // Every 2 measures
-
-    // Start pad immediately, quantized to transport grid
-    this.padLoop.start(0);
   }
 
   private createRhythmLoop(): void {
@@ -766,14 +733,14 @@ export class MusicManager {
     Tone.Transport.bpm.rampTo(bpm, 0.5);
   }
 
-  setLayerMute(layer: 'ambient' | 'bass' | 'melody' | 'pad' | 'rhythm', muted: boolean): void {
+  setLayerMute(layer: 'ambient' | 'bass' | 'melody' | 'rhythm', muted: boolean): void {
     const channel = this.getChannelForLayer(layer);
     if (channel) {
       channel.volume.rampTo(muted ? -Infinity : 0, 0.1);
     }
   }
 
-  private getChannelForLayer(layer: 'ambient' | 'bass' | 'melody' | 'pad' | 'rhythm'): Tone.Channel | null {
+  private getChannelForLayer(layer: 'ambient' | 'bass' | 'melody' | 'rhythm'): Tone.Channel | null {
     switch (layer) {
       case 'ambient':
         return this.ambientChannel;
@@ -781,8 +748,6 @@ export class MusicManager {
         return this.bassChannel;
       case 'melody':
         return this.melodyChannel;
-      case 'pad':
-        return this.padChannel;
       case 'rhythm':
         return this.rhythmChannel;
       default:
@@ -818,16 +783,16 @@ export class MusicManager {
     this.ambientSynth.dispose();
     this.bassDrone.dispose();
     this.melodySynth.dispose();
-    this.padSynth.dispose();
     this.rhythmSynth.dispose();
     this.ambientChannel.dispose();
     this.bassChannel.dispose();
     this.melodyChannel.dispose();
-    this.padChannel.dispose();
     this.rhythmChannel.dispose();
     this.reverb.dispose();
+    this.ambientReverb.dispose();
     this.filter.dispose();
     this.delay.dispose();
+    this.rhythmDelay.dispose();
     this.masterVolume.dispose();
   }
 }
