@@ -146,10 +146,23 @@ export class Cell {
     const halfWidth = Config.LAKE_WIDTH / 2;
     const halfHeight = Config.LAKE_HEIGHT / 2;
 
-    if (this.position.x < -halfWidth) this.position.x = -halfWidth;
-    if (this.position.x > halfWidth) this.position.x = halfWidth;
-    if (this.position.y < -halfHeight) this.position.y = -halfHeight;
-    if (this.position.y > halfHeight) this.position.y = halfHeight;
+    // Bounce off walls instead of getting stuck
+    if (this.position.x < -halfWidth) {
+      this.position.x = -halfWidth;
+      this.velocity.x = Math.abs(this.velocity.x) * 0.5; // Bounce with damping
+    }
+    if (this.position.x > halfWidth) {
+      this.position.x = halfWidth;
+      this.velocity.x = -Math.abs(this.velocity.x) * 0.5; // Bounce with damping
+    }
+    if (this.position.y < -halfHeight) {
+      this.position.y = -halfHeight;
+      this.velocity.y = Math.abs(this.velocity.y) * 0.5; // Bounce with damping
+    }
+    if (this.position.y > halfHeight) {
+      this.position.y = halfHeight;
+      this.velocity.y = -Math.abs(this.velocity.y) * 0.5; // Bounce with damping
+    }
   }
 
   // Handle cell death
