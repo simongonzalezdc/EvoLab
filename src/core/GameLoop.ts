@@ -18,6 +18,7 @@ import { DayNightCycle } from '../environment/DayNightCycle';
 import { EnvironmentalEffects } from '../rendering/EnvironmentalEffects';
 import { Genome } from '../genetics/Genome';
 import { MusicManager } from '../audio/MusicManager';
+import { SoundManager } from '../audio/SoundManager';
 import { AchievementSystem } from '../achievements/AchievementSystem';
 import type { Achievement } from '../achievements/AchievementSystem';
 import { EvolutionSystemsManager } from './EvolutionSystemsManager';
@@ -110,6 +111,7 @@ export class GameLoop {
   private dayNightCycle: DayNightCycle;
   private environmentalEffects: EnvironmentalEffects;
   private musicManager: MusicManager;
+  private soundManager: SoundManager;
   private achievementSystem: AchievementSystem;
   private evolutionSystems: EvolutionSystemsManager;
   private lastTime = 0;
@@ -152,7 +154,11 @@ export class GameLoop {
     this.dayNightCycle = new DayNightCycle(Config.DAY_NIGHT_START_TIME, Config.DAY_NIGHT_SPEED_MULTIPLIER);
     this.environmentalEffects = new EnvironmentalEffects(this.renderer.particleSystem);
     this.musicManager = new MusicManager();
+    this.soundManager = new SoundManager();
     this.achievementSystem = new AchievementSystem();
+
+    // Connect sound manager to entity manager
+    this.entityManager.setSoundManager(this.soundManager);
     this.evolutionSystems = new EvolutionSystemsManager({
       lakeWidth: Config.LAKE_WIDTH,
       lakeHeight: Config.LAKE_HEIGHT,
@@ -186,6 +192,7 @@ export class GameLoop {
     // Setup achievement unlock callback
     this.achievementSystem.onAchievementUnlocked((achievement) => {
       this.uiController.showAchievementNotification(achievement);
+      this.soundManager.play('victory'); // Play victory sound for achievement
     });
 
     // Setup UI callbacks
@@ -1096,6 +1103,9 @@ export class GameLoop {
 
   // Handle reproduction trigger (species-level evolution)
   private handleReproduction(): void {
+    // Play evolution sound!
+    this.soundManager.play('levelup');
+
     if (this.entityManager.playerSpecies) {
       // Species-level evolution
       const stats = this.entityManager.playerSpecies.getStats();
