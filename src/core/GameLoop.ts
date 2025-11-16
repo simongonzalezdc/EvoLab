@@ -748,6 +748,7 @@ export class GameLoop {
         const detectionRangeSq = detectionRange * detectionRange; // Avoid sqrt by comparing squared distances
 
         otherCells.forEach(otherCell => {
+          if (!cell || !otherCell) return;
           // Quick distance check using squared distance (faster than sqrt)
           const dx = cell.position.x - otherCell.position.x;
           const dy = cell.position.y - otherCell.position.y;

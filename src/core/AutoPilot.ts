@@ -6,6 +6,11 @@ import { Resource } from '../entities/Resource';
 import { BiomeGenerator, BiomeData } from '../environment/BiomeGenerator';
 import { Config } from './Config';
 
+interface Vector2D {
+  x: number;
+  y: number;
+}
+
 export class AutoPilot {
   private biomeGenerator: BiomeGenerator;
   // Use a Map to store per-cell wander state
@@ -187,7 +192,7 @@ export class AutoPilot {
     const detectionRange = 200;
     const threats: Cell[] = [];
     let totalThreatPower = 0;
-    const playerPower = player.traits.size * (1 + player.traits.armor * 0.5 + player.traits.toxin * 0.3);
+    const playerPower = player.traits.size * (1 + player.traits.armor * 0.5);
 
     // Find all nearby threats
     allCells.forEach(cell => {
@@ -200,7 +205,7 @@ export class AutoPilot {
 
       if (distance < detectionRange) {
         // Consider as threat if larger, more aggressive, or has more combat traits
-        const cellPower = cell.traits.size * (1 + cell.traits.armor * 0.5 + cell.traits.toxin * 0.3);
+        const cellPower = cell.traits.size * (1 + cell.traits.armor * 0.5);
         const isThreat = cellPower > playerPower * 0.7 || cell.traits.aggression > 5;
 
         if (isThreat) {
