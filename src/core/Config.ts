@@ -43,6 +43,8 @@ export const Config = {
   GLUCOSE_COLOR: 0xffd700,
   GLUCOSE_RESPAWN_TIME: 8000, // Reduced from 10000 - faster respawn
   RESOURCE_COLLECTION_RANGE: 30, // Increased from 25 - easier to collect
+  GOLDEN_RESOURCE_CHANCE: 0.02, // 2% chance for golden resource (10x value)
+  GOLDEN_RESOURCE_DNA_MULTIPLIER: 10, // 10x DNA from golden resources
 
   // Lake environment settings
   LAKE_WIDTH: 3000, // Increased from 2000 for more exploration space

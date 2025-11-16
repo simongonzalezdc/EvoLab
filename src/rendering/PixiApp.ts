@@ -164,7 +164,14 @@ export class PixiApp {
     this.worldContainer.addChildAt(biomeContainer, 0); // Add at bottom
   }
 
-  // Update camera to follow target position
+  // Camera smoothing properties
+  private targetCameraX = 0;
+  private targetCameraY = 0;
+  private currentCameraX = 0;
+  private currentCameraY = 0;
+  private cameraSmoothing = 0.15; // 0.1 = very smooth, 0.3 = responsive
+
+  // Update camera to follow target position with smooth easing
   updateCamera(targetX: number, targetY: number): void {
     // Don't move camera when fully zoomed out (at minimum zoom)
     if (this.zoomLevel <= this.minZoom) {
@@ -175,17 +182,21 @@ export class PixiApp {
       return;
     }
 
-    // Camera follows player - use actual canvas size
-    // Account for zoom level in camera positioning
+    // Smooth camera easing (lerp)
+    this.targetCameraX = targetX;
+    this.targetCameraY = targetY;
+    this.currentCameraX += (this.targetCameraX - this.currentCameraX) * this.cameraSmoothing;
+    this.currentCameraY += (this.targetCameraY - this.currentCameraY) * this.cameraSmoothing;
+
+    // Camera follows player with smoothed position
     const { width, height } = this.getScreenSize();
     // Position target at exact screen center
-    // First, position container so (0,0) is at screen center
     this.worldContainer.x = width / 2;
     this.worldContainer.y = height / 2;
 
-    // Then apply zoom and target offset
-    this.worldContainer.x -= targetX * this.zoomLevel;
-    this.worldContainer.y -= targetY * this.zoomLevel;
+    // Apply zoom and smoothed target offset
+    this.worldContainer.x -= this.currentCameraX * this.zoomLevel;
+    this.worldContainer.y -= this.currentCameraY * this.zoomLevel;
   }
 
   // Zoom methods
