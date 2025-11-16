@@ -13,11 +13,21 @@ import { MainMenu } from './components/MainMenu';
 import { DeathScreen } from './components/DeathScreen';
 import { AchievementsPanel } from './components/AchievementsPanel';
 import { AchievementNotification } from './components/AchievementNotification';
-import type { Traits } from '../types/entities';
+import { EvolutionControlPanel } from './components/EvolutionControlPanel';
+import { PhylogeneticTreePanel } from './components/PhylogeneticTreePanel';
+import type { Traits, Species } from '../types/entities';
 import type { TimeControl } from '../core/TimeControl';
 import type { SaveSystem, GameSettings, SavedSimulation, SavedCreature } from '../data/SaveSystem';
 import type { PopulationDataPoint, LineageNode } from '../data/HistoryTracker';
 import type { Achievement, Challenge } from '../achievements/AchievementSystem';
+
+interface PhylogeneticNode {
+  speciesId: string;
+  parentSpeciesId: string | null;
+  divergenceTime: number;
+  children: PhylogeneticNode[];
+  isExtinct: boolean;
+}
 
 interface UIState {
   showTraitEditor: boolean;
@@ -28,8 +38,16 @@ interface UIState {
   showTutorial: boolean;
   showDeathScreen: boolean;
   showAchievements: boolean;
+  showPhylogeneticTree: boolean;
   deathCause: 'atp' | 'health';
   currentTraits: Traits | null;
+  physicsEnabled: boolean;
+  reproductionMode: 'asexual' | 'sexual';
+  speciationEnabled: boolean;
+  speciesCount: number;
+  matingStats: { cellsSeekingMate: number; cellsDisplaying: number } | null;
+  phylogeneticTree: PhylogeneticNode[];
+  species: Species[];
   generation: number;
   availableDNA: number;
   survivalTime: number;
@@ -56,6 +74,10 @@ export class UIController {
   private onSettingsChange: ((settings: GameSettings) => void) | null = null;
   private onExportHistory: (() => void) | null = null;
   private onShowAchievements: (() => void) | null = null;
+  private onTogglePhysics: (() => void) | null = null;
+  private onToggleReproductionMode: (() => void) | null = null;
+  private onToggleSpeciation: (() => void) | null = null;
+  private onShowPhylogeneticTree: (() => void) | null = null;
   private timeControl: TimeControl;
   private saveSystem: SaveSystem;
 
@@ -81,8 +103,16 @@ export class UIController {
         showTutorial: false,
         showDeathScreen: false,
         showAchievements: false,
+        showPhylogeneticTree: false,
         deathCause: 'atp',
         currentTraits: null,
+        physicsEnabled: false,
+        reproductionMode: 'asexual' as const,
+        speciationEnabled: false,
+        speciesCount: 1,
+        matingStats: null,
+        phylogeneticTree: [],
+        species: [],
         generation: 1,
         availableDNA: 0,
         survivalTime: 0,
@@ -164,6 +194,22 @@ export class UIController {
         }));
       };
 
+      const handleTogglePhysics = () => {
+        this.onTogglePhysics?.();
+      };
+
+      const handleToggleReproductionMode = () => {
+        this.onToggleReproductionMode?.();
+      };
+
+      const handleToggleSpeciation = () => {
+        this.onToggleSpeciation?.();
+      };
+
+      const handleShowPhylogeneticTree = () => {
+        this.onShowPhylogeneticTree?.();
+      };
+
       return (
         <>
           {/* Main Menu */}
@@ -180,6 +226,19 @@ export class UIController {
 
           {/* Time Control Panel */}
           <TimeControlPanel timeControl={this.timeControl} />
+
+          {/* Evolution Control Panel */}
+          <EvolutionControlPanel
+            physicsEnabled={state.physicsEnabled}
+            reproductionMode={state.reproductionMode}
+            speciationEnabled={state.speciationEnabled}
+            onTogglePhysics={handleTogglePhysics}
+            onToggleReproductionMode={handleToggleReproductionMode}
+            onToggleSpeciation={handleToggleSpeciation}
+            onShowPhylogeneticTree={handleShowPhylogeneticTree}
+            speciesCount={state.speciesCount}
+            matingStats={state.matingStats}
+          />
 
           {/* Stats Panel */}
           {state.showStats && state.currentTraits && (
@@ -255,6 +314,15 @@ export class UIController {
               achievements={state.achievements}
               challenges={state.challenges}
               onClose={() => setState(s => ({ ...s, showAchievements: false }))}
+            />
+          )}
+
+          {/* Phylogenetic Tree Panel */}
+          {state.showPhylogeneticTree && (
+            <PhylogeneticTreePanel
+              phylogeneticTree={state.phylogeneticTree}
+              species={state.species}
+              onClose={() => setState(s => ({ ...s, showPhylogeneticTree: false }))}
             />
           )}
 
@@ -378,6 +446,49 @@ export class UIController {
     this.setState?.(s => ({
       ...s,
       achievementNotifications: [...s.achievementNotifications, achievement],
+    }));
+  }
+
+  // Evolution systems callbacks
+  setTogglePhysicsCallback(callback: () => void) {
+    this.onTogglePhysics = callback;
+  }
+
+  setToggleReproductionModeCallback(callback: () => void) {
+    this.onToggleReproductionMode = callback;
+  }
+
+  setToggleSpeciationCallback(callback: () => void) {
+    this.onToggleSpeciation = callback;
+  }
+
+  setShowPhylogeneticTreeCallback(callback: () => void) {
+    this.onShowPhylogeneticTree = callback;
+  }
+
+  updateEvolutionControls(
+    physicsEnabled: boolean,
+    reproductionMode: 'asexual' | 'sexual',
+    speciationEnabled: boolean,
+    speciesCount: number,
+    matingStats: { cellsSeekingMate: number; cellsDisplaying: number } | null
+  ) {
+    this.setState?.(s => ({
+      ...s,
+      physicsEnabled,
+      reproductionMode,
+      speciationEnabled,
+      speciesCount,
+      matingStats,
+    }));
+  }
+
+  showPhylogeneticTree(tree: PhylogeneticNode[], species: Species[]) {
+    this.setState?.(s => ({
+      ...s,
+      showPhylogeneticTree: true,
+      phylogeneticTree: tree,
+      species,
     }));
   }
 

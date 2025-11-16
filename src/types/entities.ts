@@ -56,6 +56,11 @@ export interface Traits {
 
   // Visual
   color: number; // Hex color
+
+  // Reproduction
+  gender?: 'male' | 'female'; // Gender for sexual reproduction
+  fertilityRate?: number; // Reproduction success rate (0-1.0)
+  matingDisplayStrength?: number; // Attractiveness for mating (0-10)
 }
 
 export interface CompoundStorage {
@@ -77,6 +82,9 @@ export interface LineageInfo {
   parentId: string | null;
   birthTime: number;
   mutations: string[];
+  motherLineageId?: string; // For sexual reproduction
+  fatherLineageId?: string; // For sexual reproduction
+  speciesId?: string; // For speciation tracking
 }
 
 export interface EntityData {
@@ -93,4 +101,24 @@ export interface ResourceData {
   type: 'glucose' | 'aminoAcid' | 'phosphate';
   amount: number;
   radius: number;
+}
+
+export interface Species {
+  id: string;
+  name: string;
+  commonAncestorLineageId: string;
+  divergenceTime: number;
+  population: number;
+  averageTraits: Partial<Traits>;
+  isExtinct: boolean;
+  extinctionTime?: number;
+  color: number; // Visual identifier
+}
+
+export interface MatingAttempt {
+  maleId: string;
+  femaleId: string;
+  compatibilityScore: number;
+  success: boolean;
+  timestamp: number;
 }
