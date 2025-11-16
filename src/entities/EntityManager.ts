@@ -32,6 +32,9 @@ export class EntityManager {
     this.combatSystem = new CombatSystem();
     this.biomeGenerator = biomeGenerator;
 
+    // Connect particle system to combat system
+    this.combatSystem.setParticleSystem(renderer.particleSystem);
+
     // Initialize AI species
     if (aiSpeciesSetup && aiSpeciesSetup.length > 0) {
       this.populationManager.initializeCustomSpecies(aiSpeciesSetup);
@@ -135,6 +138,13 @@ export class EntityManager {
         const distance = player.distanceTo(resource.position);
 
         if (distance < Config.RESOURCE_COLLECTION_RANGE) {
+          // Create eating particle effect
+          this.renderer.particleSystem.createEatingEffect(
+            resource.position.x,
+            resource.position.y,
+            Config.GLUCOSE_COLOR
+          );
+
           // Collect resource
           resource.collect();
 

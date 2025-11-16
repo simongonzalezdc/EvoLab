@@ -2,10 +2,16 @@
 
 import { Cell } from './Cell';
 import { Config } from '../core/Config';
+import type { ParticleSystem } from '../rendering/ParticleSystem';
 
 export class CombatSystem {
   private combatRange = 30; // Distance for combat
   private damageMultiplier = 0.5;
+  private particleSystem: ParticleSystem | null = null;
+
+  setParticleSystem(particleSystem: ParticleSystem): void {
+    this.particleSystem = particleSystem;
+  }
 
   // Check and resolve combat between cells
   checkCombat(cells: Cell[]): void {
@@ -45,6 +51,20 @@ export class CombatSystem {
     const armorReduction = defender.traits.armor * Config.ARMOR_REDUCTION_PER_POINT;
     const finalDamage = Math.max(Config.MINIMUM_DAMAGE, totalDamage * (1 - armorReduction));
 
+    // Create attack particle effect
+    if (this.particleSystem) {
+      const angle = Math.atan2(
+        defender.position.y - aggressor.position.y,
+        defender.position.x - aggressor.position.x
+      );
+      this.particleSystem.createAttackEffect(
+        defender.position.x,
+        defender.position.y,
+        angle,
+        0xff0000 // Red for damage
+      );
+    }
+
     // Apply damage
     defender.traits.health -= finalDamage;
 
@@ -52,6 +72,16 @@ export class CombatSystem {
     if (defender.traits.health <= 0) {
       defender.traits.health = 0;
       defender.traits.atp = 0;
+
+      // Create death burst particle effect
+      if (this.particleSystem) {
+        this.particleSystem.createDeathBurst(
+          defender.position.x,
+          defender.position.y,
+          defender.traits.color,
+          16
+        );
+      }
 
       // Aggressor gains energy from kill
       const energyGain = defender.traits.size * Config.ENERGY_GAIN_FROM_KILL_MULTIPLIER;

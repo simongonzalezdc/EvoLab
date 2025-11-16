@@ -2,12 +2,18 @@
 
 import { Application, Graphics, Container } from 'pixi.js';
 import { Config } from '../core/Config';
+import { ParticleSystem } from './ParticleSystem';
+import { MiniMap } from '../ui/MiniMap';
+import type { BiomeGenerator } from '../environment/BiomeGenerator';
 
 export class PixiApp {
   public app: Application;
   public worldContainer: Container;
+  public particleSystem: ParticleSystem;
+  public miniMap: MiniMap | null = null;
+  private uiContainer: Container; // Container for UI elements (not affected by world transforms)
   private biomeLayer: Container | null = null;
-  private mapBoundary: Graphics | null = null;
+  private particleLayer: Container;
   private isInitialized = false;
   private zoomLevel: number = 1.0;
   private minZoom: number = 0.5;
@@ -16,9 +22,14 @@ export class PixiApp {
   constructor() {
     this.app = new Application();
     this.worldContainer = new Container();
+    this.uiContainer = new Container(); // UI container stays fixed on screen
     // this.worldContainer.name = 'WorldContainer'; // Name for debugging - REMOVED due to deprecation
     this.worldContainer.visible = true; // Ensure visible
     this.worldContainer.alpha = 1.0; // Start fully visible
+
+    // Create particle layer (rendered above entities)
+    this.particleLayer = new Container();
+    this.particleSystem = new ParticleSystem(this.particleLayer);
 
     console.log('[PixiApp] Constructor: WorldContainer initialized with visible=true, alpha=1.0');
   }
@@ -57,6 +68,12 @@ export class PixiApp {
     console.log('[PixiApp] initialize: Adding worldContainer to stage');
     console.log(`[PixiApp] initialize: Stage visible: ${this.app.stage.visible}, alpha: ${this.app.stage.alpha}`);
     this.app.stage.addChild(this.worldContainer);
+
+    // Add UI container to stage (rendered on top, not affected by camera)
+    this.app.stage.addChild(this.uiContainer);
+
+    // Add particle layer to world container (on top of everything)
+    this.worldContainer.addChild(this.particleLayer);
 
     // DEBUG: Start world container at (0, 0) instead of centering
     this.worldContainer.x = 0;
@@ -210,7 +227,43 @@ export class PixiApp {
     sprite.destroy();
   }
 
+  // Initialize mini-map
+  initializeMiniMap(biomeGenerator: BiomeGenerator): void {
+    const miniMapWidth = 150;
+    const miniMapHeight = 150;
+
+    this.miniMap = new MiniMap(
+      miniMapWidth,
+      miniMapHeight,
+      Config.LAKE_WIDTH,
+      Config.LAKE_HEIGHT,
+      biomeGenerator
+    );
+
+    // Position in bottom-right corner
+    const { width, height } = this.getScreenSize();
+    this.miniMap.setPosition(width - miniMapWidth - 20, height - miniMapHeight - 20);
+
+    this.uiContainer.addChild(this.miniMap.getContainer());
+  }
+
+  // Update mini-map player position
+  updateMiniMap(playerX: number, playerY: number): void {
+    if (this.miniMap) {
+      this.miniMap.updatePlayerPosition(playerX, playerY);
+    }
+  }
+
+  // Update particle system
+  updateParticles(deltaTime: number): void {
+    this.particleSystem.update(deltaTime);
+  }
+
   dispose(): void {
+    this.particleSystem.dispose();
+    if (this.miniMap) {
+      this.miniMap.dispose();
+    }
     this.app.destroy(true, { children: true });
     this.isInitialized = false;
   }
