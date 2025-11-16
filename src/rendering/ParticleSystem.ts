@@ -231,6 +231,60 @@ export class ParticleSystem {
     setTimeout(() => clearInterval(expandInterval), life * 1000);
   }
 
+  // Create combo effect (burst of colorful particles with scaling text)
+  createComboEffect(x: number, y: number, comboSize: number): void {
+    // Create burst of golden particles for combo
+    const particleCount = 15 + comboSize * 2;
+    for (let i = 0; i < particleCount; i++) {
+      const angle = (Math.PI * 2 * i) / particleCount;
+      const speed = 60 + Math.random() * 80;
+
+      const graphic = new Graphics();
+      graphic.star(0, 0, 5, 4 + Math.random() * 3, 2);
+      graphic.fill(0xffd700); // Golden color for combo
+      graphic.x = x;
+      graphic.y = y;
+
+      this.container.addChild(graphic);
+
+      this.particles.push({
+        graphic,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 30, // Slight upward bias
+        life: 0.8 + Math.random() * 0.4,
+        maxLife: 1.2,
+        fadeOut: true,
+        shrink: true,
+        gravity: 20, // Gravity pulls particles down
+      });
+    }
+
+    // Add some extra sparkle particles
+    for (let i = 0; i < 8; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 30 + Math.random() * 50;
+
+      const graphic = new Graphics();
+      graphic.circle(0, 0, 3 + Math.random() * 2);
+      graphic.fill(0xffff00); // Bright yellow sparkles
+      graphic.x = x;
+      graphic.y = y;
+
+      this.container.addChild(graphic);
+
+      this.particles.push({
+        graphic,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 50, // Float upward
+        life: 1.0 + Math.random() * 0.5,
+        maxLife: 1.5,
+        fadeOut: true,
+        shrink: false,
+        gravity: -15, // Negative gravity for floating effect
+      });
+    }
+  }
+
   // Clear all particles
   clear(): void {
     for (const particle of this.particles) {

@@ -28,7 +28,14 @@ export const Config = {
   // Auto-pilot settings
   AUTO_PILOT_HUNGER_THRESHOLD: 0.9, // Start seeking food at 90% ATP
   AUTO_PILOT_STARVATION_WINDOW_SECONDS: 5, // Project ATP 5 seconds ahead
+
+  // Debug settings - set to true to enable detailed logging
   DEBUG_AUTO_PILOT: false, // Enable debug logging for auto-pilot
+  DEBUG_GAME_LOOP: false, // Enable debug logging for game loop initialization
+  DEBUG_RENDERER: false, // Enable debug logging for PixiApp renderer
+  DEBUG_PLAYER_SPECIES: false, // Enable debug logging for player species creation
+  DEBUG_EVOLUTION: false, // Enable debug logging for evolution events
+  DEBUG_AUDIO: false, // Enable debug logging for audio/music system
 
   // Resource settings
   GLUCOSE_COUNT: 60, // Increased from 40 to match larger map size
@@ -56,6 +63,8 @@ export const Config = {
   DNA_COST_PER_TRAIT_CHANGE: 2, // DNA points per unit change in traits
   DNA_FROM_SURVIVAL_TIME: 0.1, // DNA points per second of survival
   DNA_FROM_GLUCOSE: 0.05, // DNA points per glucose collected
+  SUPER_MUTATION_CHANCE: 0.10, // 10% chance for 2x mutation magnitude (dopamine boost)
+  SUPER_MUTATION_MULTIPLIER: 2.0, // Multiplier for super mutations
 
   // Day/Night cycle settings
   DAY_NIGHT_START_TIME: 12, // Start at noon (hour 0-24)

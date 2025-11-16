@@ -174,7 +174,9 @@ export class GameLoop {
       this.currentEvent = event;
       // TODO: Implement showEventNotification in UIController
       // this.uiController.showEventNotification(event);
-      console.log('[GameLoop] Event triggered:', event.title);
+      if (Config.DEBUG_GAME_LOOP) {
+        console.log('[GameLoop] Event triggered:', event.name);
+      }
     });
 
     // Initialize base species for speciation system
@@ -379,21 +381,15 @@ export class GameLoop {
   }
 
   async initialize(): Promise<void> {
-    console.log('[GameLoop] initialize: Starting initialization...');
-
     // Initialize renderer
-    console.log('[GameLoop] initialize: About to initialize renderer...');
     await this.renderer.initialize();
-    console.log('[GameLoop] initialize: Renderer initialized successfully');
 
     // Initialize music manager (non-blocking to avoid audio context hang)
-    console.log('[GameLoop] initialize: About to initialize music manager...');
     try {
       // Don't await this to avoid blocking on audio context
       this.musicManager.initialize().catch(error => {
         console.warn('[GameLoop] Music manager initialization failed (expected on first load):', error);
       });
-      console.log('[GameLoop] initialize: Music manager initialization started (non-blocking)');
     } catch (error) {
       console.error('[GameLoop] ERROR: Failed to start music manager initialization:', error);
     }
@@ -404,14 +400,9 @@ export class GameLoop {
       this.achievementSystem.importProgress(achievementData);
     }
 
-    console.log('[GameLoop] DEBUG: About to enter biome layer try block');
     try {
       // Add biome layer to renderer (underneath entities)
-      console.log('[GameLoop] initialize: Adding biome layer to renderer...');
-      console.log('[GameLoop] initialize: BiomeRenderer container visible:', this.biomeRenderer.getContainer().visible);
-      console.log('[GameLoop] initialize: BiomeRenderer container alpha:', this.biomeRenderer.getContainer().alpha);
       this.renderer.addBiomeLayer(this.biomeRenderer.getContainer());
-      console.log('[GameLoop] initialize: Biome layer added successfully');
     } catch (error) {
       console.error('[GameLoop] ERROR: Failed to add biome layer:', error);
       throw error;
@@ -419,10 +410,7 @@ export class GameLoop {
 
     try {
       // Create player species (species-level gameplay)
-      console.log('[GameLoop] initialize: About to create player species...');
       this.entityManager.createPlayerSpecies();
-      console.log('[GameLoop] initialize: Player species created successfully');
-      console.log('[GameLoop] initialize: Player species cells count:', this.entityManager.playerSpecies?.getAllCells().length || 0);
     } catch (error) {
       console.error('[GameLoop] ERROR: Failed to create player species:', error);
       throw error;
@@ -432,9 +420,7 @@ export class GameLoop {
       // Initialize camera to species position immediately
       if (this.entityManager.playerSpecies) {
         const speciesCenter = this.entityManager.playerSpecies.getCenterPosition();
-        console.log('[GameLoop] initialize: Species center position:', speciesCenter);
         this.renderer.updateCamera(speciesCenter.x, speciesCenter.y);
-        console.log('[GameLoop] initialize: Camera updated to species position');
       }
     } catch (error) {
       console.error('[GameLoop] ERROR: Failed to initialize camera:', error);
@@ -443,10 +429,7 @@ export class GameLoop {
 
     try {
       // Spawn resources
-      console.log('[GameLoop] initialize: About to spawn resources...');
       this.entityManager.spawnResources();
-      console.log('[GameLoop] initialize: Resources spawned successfully');
-      console.log('[GameLoop] initialize: Resource count:', this.entityManager.getResources().length);
     } catch (error) {
       console.error('[GameLoop] ERROR: Failed to spawn resources:', error);
       throw error;
@@ -475,8 +458,6 @@ export class GameLoop {
         localStorage.setItem('evolab_tutorial_seen', 'true');
       }, 1000);
     }
-
-    console.log('[GameLoop] initialize: Game initialized successfully!');
   }
 
   // Start the game loop
@@ -589,23 +570,19 @@ export class GameLoop {
         });
         
         // Update camera to species center
-        console.log(`[GameLoop] Before camera update: speciesCenter=(${speciesCenter.x}, ${speciesCenter.y})`);
         this.renderer.updateCamera(speciesCenter.x, speciesCenter.y);
-        console.log(`[GameLoop] After camera update`);
 
         // Update biome rendering around camera (with wider view for species)
         const { width: visibleWidth, height: visibleHeight } = this.renderer.getWorldViewSize();
         const viewPadding = Config.BIOME_RENDER_PADDING;
         const viewWidth = Math.max(visibleWidth, maxDistance * 2 + viewPadding);
         const viewHeight = Math.max(visibleHeight, maxDistance * 2 + viewPadding);
-        console.log(`[GameLoop] About to call biomeRenderer.render with: center=(${speciesCenter.x}, ${speciesCenter.y}), view=(${viewWidth}x${viewHeight})`);
         this.biomeRenderer.render(
           speciesCenter.x,
           speciesCenter.y,
           viewWidth,
           viewHeight
         );
-        console.log('[GameLoop] biomeRenderer.render completed');
       }
 
       // Check for species extinction
@@ -741,24 +718,43 @@ export class GameLoop {
     if (this.entityManager.playerSpecies) {
       const speciesCells = this.entityManager.playerSpecies.getAllCells();
       if (speciesCells.length === 0) return 0;
-      
-      // Check for nearby predators
+
+      // PERFORMANCE FIX: Sample only a subset of cells to avoid O(n²) complexity
+      // For large populations, check only 5-10 representative cells instead of all
+      const sampleSize = Math.min(10, speciesCells.length);
+      const sampledCells = speciesCells.length <= sampleSize
+        ? speciesCells
+        : Array.from({ length: sampleSize }, (_, i) =>
+            speciesCells[Math.floor(i * speciesCells.length / sampleSize)]
+          );
+
+      // Get all non-species cells once
       const allCells = this.entityManager.getAllCells();
-      let threatCount = 0;
-      speciesCells.forEach(cell => {
-        allCells.forEach(otherCell => {
-          if (otherCell.id !== cell.id && !speciesCells.includes(otherCell)) {
-            const distance = Math.sqrt(
-              Math.pow(cell.position.x - otherCell.position.x, 2) +
-              Math.pow(cell.position.y - otherCell.position.y, 2)
-            );
-            if (distance < 100 && otherCell.traits.aggression > 6) {
-              threatCount++;
-            }
+      const otherCells = allCells.filter(cell => !speciesCells.includes(cell));
+
+      let totalThreatLevel = 0;
+
+      // For each sampled cell, check only nearby threats using distance threshold
+      sampledCells.forEach(cell => {
+        let nearbyThreats = 0;
+        const detectionRange = 100;
+        const detectionRangeSq = detectionRange * detectionRange; // Avoid sqrt by comparing squared distances
+
+        otherCells.forEach(otherCell => {
+          // Quick distance check using squared distance (faster than sqrt)
+          const dx = cell.position.x - otherCell.position.x;
+          const dy = cell.position.y - otherCell.position.y;
+          const distanceSq = dx * dx + dy * dy;
+
+          if (distanceSq < detectionRangeSq && otherCell.traits.aggression > 6) {
+            nearbyThreats++;
           }
         });
+
+        totalThreatLevel += nearbyThreats;
       });
-      return Math.min(1, threatCount / speciesCells.length);
+
+      return Math.min(1, totalThreatLevel / (sampledCells.length * 3)); // Normalize to 0-1 range
     }
     
     const player = this.entityManager.playerCell;
@@ -1011,6 +1007,8 @@ export class GameLoop {
       if (dnaValue) {
         const baseGenome = this.entityManager.playerSpecies.getBaseGenome();
         dnaValue.textContent = Math.floor(baseGenome.dnaPoints).toString();
+        // Update DNA progress bar
+        this.uiController.updateDNAProgress(baseGenome.dnaPoints, 50);
       }
 
       // Evolution button - show when species is ready (based on average survival time)
@@ -1062,6 +1060,8 @@ export class GameLoop {
     const dnaValue = document.getElementById('dna-value');
     if (dnaValue) {
       dnaValue.textContent = Math.floor(player.genome.dnaPoints).toString();
+      // Update DNA progress bar
+      this.uiController.updateDNAProgress(player.genome.dnaPoints, 50);
     }
 
     // Update Time of Day

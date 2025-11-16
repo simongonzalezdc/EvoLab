@@ -8,6 +8,7 @@ import { ReproductionSystem } from '../genetics/ReproductionSystem';
 import type { Cell } from '../entities/Cell';
 import type { Species } from '../types/entities';
 import { Genome } from '../genetics/Genome';
+import { Config } from './Config';
 
 export interface EvolutionSystemsConfig {
   lakeWidth: number;
@@ -142,7 +143,7 @@ export class EvolutionSystemsManager {
       if (Math.random() < 0.01) {
         const newSpecies = this.speciationSystem.checkForSpeciation(cells);
 
-        if (newSpecies.length > 0) {
+        if (newSpecies.length > 0 && Config.DEBUG_EVOLUTION) {
           console.log(`🧬 New species emerged: ${newSpecies.map(s => s.name).join(', ')}`);
         }
       }

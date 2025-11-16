@@ -2,6 +2,7 @@
 
 import type { Traits } from '../types/entities';
 import { TraitSystem } from './TraitSystem';
+import { Config } from '../core/Config';
 
 export interface MutationConfig {
   mutationRate: number; // Probability of mutation per trait (0-1)
@@ -34,14 +35,16 @@ export class MutationEngine {
 
       if (Math.random() < this.config.mutationRate) {
         const oldValue = mutated[key] as number;
-        const change = this.generateMutation(oldValue, key);
+        const isSuperMutation = Math.random() < Config.SUPER_MUTATION_CHANCE;
+        const change = this.generateMutation(oldValue, key, isSuperMutation);
         const newValue = oldValue + change;
 
         mutated[key] = newValue as never;
 
-        // Record mutation
+        // Record mutation (with super mutation indicator)
         const direction = change > 0 ? '↑' : '↓';
-        mutations.push(`${key} ${direction}${Math.abs(change).toFixed(2)}`);
+        const superIndicator = isSuperMutation ? '⚡' : '';
+        mutations.push(`${key} ${direction}${Math.abs(change).toFixed(2)}${superIndicator}`);
       }
     }
 
@@ -52,9 +55,15 @@ export class MutationEngine {
   }
 
   // Generate mutation value for a trait
-  private generateMutation(currentValue: number, traitKey: keyof Traits): number {
+  private generateMutation(currentValue: number, traitKey: keyof Traits, isSuperMutation: boolean = false): number {
     // Calculate base mutation
-    const range = currentValue * this.config.mutationMagnitude;
+    let range = currentValue * this.config.mutationMagnitude;
+
+    // Apply super mutation multiplier for variable rewards (dopamine boost!)
+    if (isSuperMutation) {
+      range *= Config.SUPER_MUTATION_MULTIPLIER;
+    }
+
     const mutation = (Math.random() * 2 - 1) * range; // Random between -range and +range
 
     // Apply beneficial bias (slightly favor positive mutations)

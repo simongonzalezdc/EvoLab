@@ -19,6 +19,7 @@ import { BiomeLegend } from './components/BiomeLegend';
 import { ZoomControls } from './components/ZoomControls';
 import { MusicDevTools } from './components/MusicDevTools';
 import { GameSetupPanel } from './components/GameSetupPanel';
+import { DNAProgressBar } from './components/DNAProgressBar';
 import type { Traits, Species } from '../types/entities';
 import type { TimeControl } from '../core/TimeControl';
 import type { SaveSystem, GameSettings, SavedSimulation, SavedCreature } from '../data/SaveSystem';
@@ -91,6 +92,8 @@ interface UIState {
   species: Species[];
   generation: number;
   availableDNA: number;
+  targetDNA: number;
+  currentDNA: number;
   survivalTime: number;
   resourcesCollected: number;
   mutations: string[];
@@ -167,6 +170,8 @@ export class UIController {
         species: [],
         generation: 1,
         availableDNA: 0,
+        targetDNA: 50,
+        currentDNA: 0,
         survivalTime: 0,
         resourcesCollected: 0,
         mutations: [],
@@ -359,6 +364,13 @@ export class UIController {
               onResetZoom={() => this.onResetZoom?.()}
             />
           )}
+
+          {/* DNA Progress Bar HUD */}
+          <DNAProgressBar
+            currentDNA={state.currentDNA}
+            targetDNA={state.targetDNA}
+            generation={state.generation}
+          />
 
           {/* Music Dev Tools */}
           {state.showMusicDevTools && this.getMusicManager && (
@@ -663,6 +675,14 @@ export class UIController {
       showPhylogeneticTree: true,
       phylogeneticTree: tree,
       species,
+    }));
+  }
+
+  updateDNAProgress(currentDNA: number, targetDNA: number = 50) {
+    this.setState?.(s => ({
+      ...s,
+      currentDNA,
+      targetDNA,
     }));
   }
 
