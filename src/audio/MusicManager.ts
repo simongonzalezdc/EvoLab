@@ -139,12 +139,14 @@ export class MusicManager {
   private bassDrone: Tone.Synth;
   private melodySynth: Tone.Synth;
   private padSynth: Tone.PolySynth;
+  private rhythmSynth: Tone.NoiseSynth;
 
   // Per-synth channels for effects
   private ambientChannel: Tone.Channel;
   private bassChannel: Tone.Channel;
   private melodyChannel: Tone.Channel;
   private padChannel: Tone.Channel;
+  private rhythmChannel: Tone.Channel;
 
   // Effects
   private reverb: Tone.Reverb;
@@ -159,6 +161,7 @@ export class MusicManager {
   private melodyLoop: Tone.Loop | null = null;
   private bassLoop: Tone.Loop | null = null;
   private padLoop: Tone.Loop | null = null;
+  private rhythmLoop: Tone.Loop | null = null;
   private ambientChordSeed = 0;
   private lastMelodyIndex = 0; // Track last melody note for stepwise motion
 
@@ -198,6 +201,7 @@ export class MusicManager {
     this.bassChannel = new Tone.Channel({ volume: -8 }).toDestination();
     this.melodyChannel = new Tone.Channel({ volume: -10 }).toDestination();
     this.padChannel = new Tone.Channel({ volume: -15 }).toDestination();
+    this.rhythmChannel = new Tone.Channel({ volume: -18 }).toDestination();
 
     // Create synths
     this.ambientSynth = new Tone.PolySynth(Tone.Synth, {
@@ -237,6 +241,18 @@ export class MusicManager {
         decay: 2,
         sustain: 0.7,
         release: 4,
+      },
+    });
+
+    this.rhythmSynth = new Tone.NoiseSynth({
+      noise: {
+        type: 'white', // White noise for crisp, typing-like sound
+      },
+      envelope: {
+        attack: 0.001, // Very fast attack for percussive hit
+        decay: 0.05,   // Short decay
+        sustain: 0,    // No sustain - quick hits only
+        release: 0.02, // Very short release
       },
     });
 
@@ -323,8 +339,13 @@ export class MusicManager {
     this.padSynth.connect(this.padChannel);
     this.padChannel.connect(this.reverb);
 
+    // Rhythm -> channel -> filter -> master (dry, percussive)
+    this.rhythmSynth.connect(this.rhythmChannel);
+    this.rhythmChannel.connect(this.filter);
+    this.filter.connect(this.masterVolume);
+
     // Volumes are already set in channel creation
-    // Ambient: -6dB, Bass: -8dB, Melody: -10dB, Pad: -15dB
+    // Ambient: -6dB, Bass: -8dB, Melody: -10dB, Pad: -15dB, Rhythm: -18dB
   }
 
   async initialize(): Promise<void> {
@@ -412,6 +433,7 @@ export class MusicManager {
     this.createBassLoop();
     this.createMelodyLoop();
     this.createPadLoop();
+    this.createRhythmLoop();
   }
 
   private stopMusic(): void {
@@ -420,6 +442,7 @@ export class MusicManager {
     this.melodyLoop?.stop();
     this.bassLoop?.stop();
     this.padLoop?.stop();
+    this.rhythmLoop?.stop();
 
     // Release all notes
     this.ambientSynth.releaseAll();
@@ -553,6 +576,30 @@ export class MusicManager {
     this.padLoop.start(0);
   }
 
+  private createRhythmLoop(): void {
+    this.rhythmLoop?.stop();
+
+    this.rhythmLoop = new Tone.Loop((time: number) => {
+      if (!this.isEnabled) return;
+
+      // Create a microbeat pattern - typing/shuffling card sound
+      // Probability-based triggering for organic feel
+
+      // Activity increases with combat intensity
+      const baseActivity = 0.3; // 30% base chance
+      const combatBoost = this.currentState.combatIntensity * 0.4; // Up to 70% in combat
+      const activity = baseActivity + combatBoost;
+
+      // Random microbeat hits
+      if (Math.random() < activity) {
+        // Very short noise burst for typing/shuffling sound
+        this.rhythmSynth.triggerAttackRelease('16n', time);
+      }
+    }, '16n'); // 16th note grid for microbeat feel
+
+    this.rhythmLoop.start(0);
+  }
+
   private updateMusicParameters(): void {
     // Update filter based on light level (darker = more filtered)
     const filterFreq = 500 + this.currentState.lightLevel * 1500;
@@ -682,14 +729,14 @@ export class MusicManager {
     Tone.Transport.bpm.rampTo(bpm, 0.5);
   }
 
-  setLayerMute(layer: 'ambient' | 'bass' | 'melody' | 'pad', muted: boolean): void {
+  setLayerMute(layer: 'ambient' | 'bass' | 'melody' | 'pad' | 'rhythm', muted: boolean): void {
     const channel = this.getChannelForLayer(layer);
     if (channel) {
       channel.volume.rampTo(muted ? -Infinity : 0, 0.1);
     }
   }
 
-  private getChannelForLayer(layer: 'ambient' | 'bass' | 'melody' | 'pad'): Tone.Channel | null {
+  private getChannelForLayer(layer: 'ambient' | 'bass' | 'melody' | 'pad' | 'rhythm'): Tone.Channel | null {
     switch (layer) {
       case 'ambient':
         return this.ambientChannel;
@@ -699,6 +746,8 @@ export class MusicManager {
         return this.melodyChannel;
       case 'pad':
         return this.padChannel;
+      case 'rhythm':
+        return this.rhythmChannel;
       default:
         return null;
     }
@@ -733,10 +782,12 @@ export class MusicManager {
     this.bassDrone.dispose();
     this.melodySynth.dispose();
     this.padSynth.dispose();
+    this.rhythmSynth.dispose();
     this.ambientChannel.dispose();
     this.bassChannel.dispose();
     this.melodyChannel.dispose();
     this.padChannel.dispose();
+    this.rhythmChannel.dispose();
     this.reverb.dispose();
     this.filter.dispose();
     this.delay.dispose();
