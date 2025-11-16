@@ -31,15 +31,15 @@ export const Config = {
   DEBUG_AUTO_PILOT: false, // Enable debug logging for auto-pilot
 
   // Resource settings
-  GLUCOSE_COUNT: 40, // Increased from 30 - more resources available
+  GLUCOSE_COUNT: 60, // Increased from 40 to match larger map size
   GLUCOSE_RADIUS: 8,
   GLUCOSE_COLOR: 0xffd700,
   GLUCOSE_RESPAWN_TIME: 8000, // Reduced from 10000 - faster respawn
   RESOURCE_COLLECTION_RANGE: 30, // Increased from 25 - easier to collect
 
   // Lake environment settings
-  LAKE_WIDTH: 2000,
-  LAKE_HEIGHT: 1500,
+  LAKE_WIDTH: 3000, // Increased from 2000 for more exploration space
+  LAKE_HEIGHT: 2250, // Increased from 1500 to maintain 4:3 aspect ratio
 
   // Biome generation settings
   RARE_BIOME_WEIGHT: 0.15, // 15% chance for rare biomes (CRYSTAL, SWAMP)

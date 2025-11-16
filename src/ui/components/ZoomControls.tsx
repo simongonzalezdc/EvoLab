@@ -22,7 +22,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
       style={{
         position: 'fixed',
         bottom: '20px',
-        left: '20px',
+        left: '320px', // Moved right to give HUD more space
         backgroundColor: 'rgba(0, 0, 0, 0.85)',
         border: '2px solid #4caf50',
         borderRadius: '8px',
@@ -31,7 +31,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
         flexDirection: 'column',
         gap: '8px',
         alignItems: 'center',
-        zIndex: 100,
+        zIndex: 90,
         fontFamily: 'monospace',
         fontSize: '14px',
         color: 'white',

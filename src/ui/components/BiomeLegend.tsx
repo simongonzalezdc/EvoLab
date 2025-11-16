@@ -216,7 +216,7 @@ export const BiomeLegend: React.FC<BiomeLegendProps> = ({ onToggle, onBiomeHover
     <div
       style={{
         position: 'fixed',
-        bottom: '20px',
+        top: '80px', // Moved to top-right area, below main menu
         right: '20px',
         backgroundColor: 'rgba(0, 0, 0, 0.85)',
         border: '2px solid #4caf50',
@@ -224,12 +224,12 @@ export const BiomeLegend: React.FC<BiomeLegendProps> = ({ onToggle, onBiomeHover
         padding: isCollapsed ? '8px 12px' : '15px',
         minWidth: isCollapsed ? 'auto' : '280px',
         maxWidth: isCollapsed ? 'auto' : '320px',
-        maxHeight: isCollapsed ? 'auto' : '70vh',
+        maxHeight: isCollapsed ? 'auto' : 'calc(100vh - 200px)', // Leave room for main menu
         overflowY: 'auto',
         color: 'white',
         fontFamily: 'monospace',
         fontSize: '13px',
-        zIndex: 100,
+        zIndex: 95, // Below main menu
         transition: 'all 0.3s ease',
         cursor: isCollapsed ? 'pointer' : 'default',
         pointerEvents: 'auto',

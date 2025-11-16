@@ -34,8 +34,8 @@ export const EvolutionControlPanel: React.FC<Props> = ({
     <div
       style={{
         position: 'fixed',
-        bottom: '120px', // Move to bottom to avoid menu
-        right: '10px',
+        bottom: '20px', // Moved to bottom-right
+        right: '20px',
         backgroundColor: 'rgba(0, 0, 0, 0.85)',
         border: '2px solid #4caf50',
         borderRadius: '8px',
@@ -44,7 +44,7 @@ export const EvolutionControlPanel: React.FC<Props> = ({
         color: 'white',
         fontFamily: 'monospace',
         fontSize: '13px',
-        zIndex: 90, // Lower z-index than menu (100)
+        zIndex: 95, // Higher than biome legend
         transition: 'all 0.3s ease',
         cursor: isCollapsed ? 'pointer' : 'default',
       }}
