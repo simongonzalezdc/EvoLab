@@ -425,15 +425,22 @@ export class MusicManager {
   private startMusic(): void {
     if (!this.isEnabled) return;
 
-    // Start Transport
-    Tone.Transport.start();
+    // Set Transport BPM for consistent timing across all layers
+    // All loops use relative timing (1m, 4n, etc.) which sync to this BPM
+    Tone.Transport.bpm.value = 80; // Slower, ambient tempo
+
+    // Start Transport at quantized time
+    Tone.Transport.start('+0.1'); // Small delay to ensure all loops are ready
 
     // Create loops based on current state
-    this.createAmbientLoop();
-    this.createBassLoop();
-    this.createMelodyLoop();
-    this.createPadLoop();
-    this.createRhythmLoop();
+    // QUANTIZATION: All loops use Tone.Loop with time parameter, ensuring
+    // every note is triggered exactly on the Transport timeline.
+    // Loop start times use quantization markers (@1m, @2m, etc.)
+    this.createAmbientLoop();  // Starts at 0 (immediately)
+    this.createBassLoop();     // First note at @1m, loop at @4m
+    this.createMelodyLoop();   // Starts at @2m
+    this.createPadLoop();      // Starts at 0 (immediately)
+    this.createRhythmLoop();   // Starts at 0 (16th note grid)
   }
 
   private stopMusic(): void {
@@ -450,8 +457,14 @@ export class MusicManager {
     this.bassDrone.triggerRelease();
     this.padSynth.releaseAll();
 
+    // Clear all scheduled events from Transport
+    Tone.Transport.cancel();
+
     // Stop transport
     Tone.Transport.stop();
+
+    // Reset transport position for clean restart
+    Tone.Transport.position = 0;
   }
 
   private restartMusic(): void {
@@ -476,6 +489,7 @@ export class MusicManager {
       }
     }, interval);
 
+    // Start quantized to measure boundary
     this.ambientLoop.start(0);
   }
 
@@ -487,10 +501,12 @@ export class MusicManager {
     // Release any existing bass note first
     this.bassDrone.triggerRelease();
 
-    // Start continuous bass drone (triggered once, sustained)
+    // Schedule the initial bass note quantized to the grid
     if (this.isEnabled && bassNote) {
-      // Use triggerAttackRelease with very long duration for sustained drone
-      this.bassDrone.triggerAttack(bassNote);
+      // Schedule at the start of the next measure
+      Tone.Transport.scheduleOnce((time) => {
+        this.bassDrone.triggerAttack(bassNote, time);
+      }, '@1m');
     }
 
     // Create a loop to refresh the bass periodically (every 4 measures)
@@ -500,10 +516,11 @@ export class MusicManager {
 
       // Release and retrigger every 4 measures for freshness
       this.bassDrone.triggerRelease(time);
-      this.bassDrone.triggerAttack(bassNote, time + 0.1);
+      this.bassDrone.triggerAttack(bassNote, time + 0.05); // Small offset to avoid clicks
     }, '4m');
 
-    this.bassLoop.start('4m'); // Start after 4 measures
+    // Start bass loop at measure boundary, after 4 measures
+    this.bassLoop.start('@4m');
   }
 
   private createMelodyLoop(): void {
@@ -533,17 +550,19 @@ export class MusicManager {
           // Ensure melody is in audible range (octave 3+)
           const clampedNote = clampNoteToMinOctave(note, MIN_MELODY_OCTAVE);
 
-          // Varied note durations
+          // Varied note durations - all quantized
           const durations: Tone.Unit.Time[] = ['8n', '4n', '4n.'];
           const duration = durations[Math.floor(Math.random() * durations.length)] ?? '4n';
 
+          // Trigger at the exact scheduled time for quantization
           this.melodySynth.triggerAttackRelease(clampedNote, duration, time);
           this.lastMelodyIndex = newIndex;
         }
       }
     }, tempo);
 
-    this.melodyLoop.start(0);
+    // Start melody at measure 2 to let ambient establish first
+    this.melodyLoop.start('@2m');
   }
 
   private createPadLoop(): void {
@@ -567,36 +586,54 @@ export class MusicManager {
           // Pad with root if only 1 note available
           const finalChord = uniqueChord.length === 1 ? [uniqueChord[0]!, uniqueChord[0]!] : uniqueChord.slice(0, 2);
 
-          // Very long sustained notes (2 measures)
+          // Very long sustained notes (2 measures) - triggered at exact scheduled time
           this.padSynth.triggerAttackRelease(finalChord, '2m', time);
         }
       }
     }, '2m'); // Every 2 measures
 
+    // Start pad immediately, quantized to transport grid
     this.padLoop.start(0);
   }
 
   private createRhythmLoop(): void {
     this.rhythmLoop?.stop();
 
+    // Track beat position for pattern-based triggering
+    let beatCount = 0;
+
     this.rhythmLoop = new Tone.Loop((time: number) => {
       if (!this.isEnabled) return;
 
       // Create a microbeat pattern - typing/shuffling card sound
-      // Probability-based triggering for organic feel
+      // Beat position determines probability (emphasize downbeats)
+      const beatInMeasure = beatCount % 16; // 16 sixteenth notes per measure (4/4)
 
-      // Activity increases with combat intensity
-      const baseActivity = 0.3; // 30% base chance
-      const combatBoost = this.currentState.combatIntensity * 0.4; // Up to 70% in combat
-      const activity = baseActivity + combatBoost;
+      // Downbeats (1, 5, 9, 13) have higher probability
+      const isDownbeat = beatInMeasure % 4 === 0;
+      const isOffbeat = beatInMeasure % 2 === 1;
 
-      // Random microbeat hits
-      if (Math.random() < activity) {
-        // Very short noise burst for typing/shuffling sound
-        this.rhythmSynth.triggerAttackRelease('16n', time);
+      // Base activity increases with combat intensity
+      let activity = 0.2; // Base 20%
+
+      if (isDownbeat) {
+        activity = 0.5 + (this.currentState.combatIntensity * 0.3); // 50-80% on downbeats
+      } else if (isOffbeat) {
+        activity = 0.15 + (this.currentState.combatIntensity * 0.25); // 15-40% on offbeats
+      } else {
+        activity = 0.1 + (this.currentState.combatIntensity * 0.2); // 10-30% elsewhere
       }
+
+      // Trigger based on probability, but always quantized to the grid
+      if (Math.random() < activity) {
+        // Very short noise burst for typing/shuffling sound, triggered at exact time
+        this.rhythmSynth.triggerAttackRelease('32n', time);
+      }
+
+      beatCount++;
     }, '16n'); // 16th note grid for microbeat feel
 
+    // Start rhythm quantized to beat 1
     this.rhythmLoop.start(0);
   }
 
