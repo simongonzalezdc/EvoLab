@@ -10,6 +10,7 @@ import { SaveSystem } from '../data/SaveSystem';
 import { HistoryTracker } from '../data/HistoryTracker';
 import type { Traits } from '../types/entities';
 import type { GameSettings, SavedSimulation, SavedCreature } from '../data/SaveSystem';
+import type { GameSetupOptions } from '../types/game';
 
 import { BiomeGenerator } from '../environment/BiomeGenerator';
 import { BiomeRenderer } from '../rendering/BiomeRenderer';
@@ -21,6 +22,74 @@ import type { Achievement } from '../achievements/AchievementSystem';
 import { EvolutionSystemsManager } from './EvolutionSystemsManager';
 import { AutoPilot } from './AutoPilot';
 import { Cell } from '../entities/Cell';
+import { BehaviorType } from '../ai/AIBehavior';
+import type { AISpeciesSetup } from '../ai/PopulationManager';
+
+const MAX_COMPETITOR_SPECIES = 6;
+
+const buildDefaultCompetitionSetup = (): GameSetupOptions => ({
+  species: [
+    {
+      id: 'default-herbivore',
+      type: 'herbivore',
+      population: Config.HERBIVORE_POPULATION,
+      name: 'Herbivore',
+    },
+    {
+      id: 'default-carnivore',
+      type: 'carnivore',
+      population: Config.CARNIVORE_POPULATION,
+      name: 'Carnivore',
+    },
+    {
+      id: 'default-omnivore',
+      type: 'omnivore',
+      population: Config.OMNIVORE_POPULATION,
+      name: 'Omnivore',
+    },
+  ],
+});
+
+const sanitizeCompetitionSetup = (setup?: GameSetupOptions): GameSetupOptions => {
+  if (!setup || !Array.isArray(setup.species)) {
+    return buildDefaultCompetitionSetup();
+  }
+
+  const normalized = setup.species
+    .slice(0, MAX_COMPETITOR_SPECIES)
+    .map((spec, index) => ({
+      id: spec.id || `species-${index + 1}`,
+      type: spec.type,
+      population: Math.max(1, Math.floor(spec.population || 1)),
+      name: spec.name,
+    }))
+    .filter(spec => spec.population > 0);
+
+  if (normalized.length === 0) {
+    return buildDefaultCompetitionSetup();
+  }
+
+  return { species: normalized };
+};
+
+const mapCompetitorType = (type: string): BehaviorType => {
+  switch (type) {
+    case 'carnivore':
+      return BehaviorType.CARNIVORE;
+    case 'omnivore':
+      return BehaviorType.OMNIVORE;
+    case 'herbivore':
+    default:
+      return BehaviorType.HERBIVORE;
+  }
+};
+
+const convertCompetitionSetupToAI = (setup: GameSetupOptions): AISpeciesSetup[] =>
+  setup.species.map((spec, index) => ({
+    name: spec.name || `Species ${index + 1}`,
+    type: mapCompetitorType(spec.type),
+    population: Math.max(1, Math.floor(spec.population || 1)),
+  }));
 
 export class GameLoop {
   private renderer: PixiApp;
@@ -49,17 +118,23 @@ export class GameLoop {
   private visitedBiomes: Set<string> = new Set();
   private totalGlucoseCollected = 0;
   private autoPilot: AutoPilot;
-  private autoMode = false; // Auto-pilot mode (cell manages itself)
+  private autoMode = true; // Auto-pilot mode (cell manages itself)
+  private competitionSetup: GameSetupOptions;
 
   constructor() {
     this.renderer = new PixiApp();
     this.inputHandler = new InputHandler();
-    this.entityManager = new EntityManager(this.renderer);
+    this.biomeGenerator = new BiomeGenerator(Config.LAKE_WIDTH, Config.LAKE_HEIGHT);
+    this.competitionSetup = this.sanitizeCompetitionSetup(this.getDefaultCompetitionSetup());
+    this.entityManager = new EntityManager(
+      this.renderer,
+      this.biomeGenerator,
+      this.convertCompetitionSetupToAI(this.competitionSetup)
+    );
     this.timeControl = new TimeControl();
     this.saveSystem = new SaveSystem();
     this.historyTracker = new HistoryTracker();
     this.uiController = new UIController(this.timeControl, this.saveSystem);
-    this.biomeGenerator = new BiomeGenerator(Config.LAKE_WIDTH, Config.LAKE_HEIGHT);
     this.biomeRenderer = new BiomeRenderer(this.biomeGenerator);
     this.dayNightCycle = new DayNightCycle(Config.DAY_NIGHT_START_TIME, Config.DAY_NIGHT_SPEED_MULTIPLIER);
     this.musicManager = new MusicManager();
@@ -72,7 +147,7 @@ export class GameLoop {
       enableSpeciation: false, // Start disabled
     });
     this.currentSettings = this.saveSystem.getDefaultSettings();
-    this.autoPilot = new AutoPilot();
+    this.autoPilot = new AutoPilot(this.biomeGenerator);
 
     // Initialize base species for speciation system
     const baseGenome = Genome.createDefault();
@@ -151,8 +226,8 @@ export class GameLoop {
       }
     });
 
-    this.uiController.setNewGameCallback(() => {
-      this.resetGame();
+    this.uiController.setNewGameCallback((options) => {
+      this.resetGame(options);
     });
 
     this.uiController.setLoadSimulationCallback((sim: SavedSimulation) => {
@@ -252,13 +327,24 @@ export class GameLoop {
   }
 
   async initialize(): Promise<void> {
-    // console.log('Initializing EvoLab...');
+    console.log('[GameLoop] initialize: Starting initialization...');
 
     // Initialize renderer
+    console.log('[GameLoop] initialize: About to initialize renderer...');
     await this.renderer.initialize();
+    console.log('[GameLoop] initialize: Renderer initialized successfully');
 
-    // Initialize music manager
-    await this.musicManager.initialize();
+    // Initialize music manager (non-blocking to avoid audio context hang)
+    console.log('[GameLoop] initialize: About to initialize music manager...');
+    try {
+      // Don't await this to avoid blocking on audio context
+      this.musicManager.initialize().catch(error => {
+        console.warn('[GameLoop] Music manager initialization failed (expected on first load):', error);
+      });
+      console.log('[GameLoop] initialize: Music manager initialization started (non-blocking)');
+    } catch (error) {
+      console.error('[GameLoop] ERROR: Failed to start music manager initialization:', error);
+    }
 
     // Load achievement progress
     const achievementData = await this.saveSystem.loadAchievements();
@@ -266,11 +352,53 @@ export class GameLoop {
       this.achievementSystem.importProgress(achievementData);
     }
 
-    // Add biome layer to renderer (underneath entities)
-    this.renderer.addBiomeLayer(this.biomeRenderer.getContainer());
+    console.log('[GameLoop] DEBUG: About to enter biome layer try block');
+    try {
+      // Add biome layer to renderer (underneath entities)
+      console.log('[GameLoop] initialize: Adding biome layer to renderer...');
+      console.log('[GameLoop] initialize: BiomeRenderer container visible:', this.biomeRenderer.getContainer().visible);
+      console.log('[GameLoop] initialize: BiomeRenderer container alpha:', this.biomeRenderer.getContainer().alpha);
+      this.renderer.addBiomeLayer(this.biomeRenderer.getContainer());
+      console.log('[GameLoop] initialize: Biome layer added successfully');
+    } catch (error) {
+      console.error('[GameLoop] ERROR: Failed to add biome layer:', error);
+      throw error;
+    }
 
-    // Create player species (species-level gameplay)
-    this.entityManager.createPlayerSpecies();
+    try {
+      // Create player species (species-level gameplay)
+      console.log('[GameLoop] initialize: About to create player species...');
+      this.entityManager.createPlayerSpecies();
+      console.log('[GameLoop] initialize: Player species created successfully');
+      console.log('[GameLoop] initialize: Player species cells count:', this.entityManager.playerSpecies?.getAllCells().length || 0);
+    } catch (error) {
+      console.error('[GameLoop] ERROR: Failed to create player species:', error);
+      throw error;
+    }
+
+    try {
+      // Initialize camera to species position immediately
+      if (this.entityManager.playerSpecies) {
+        const speciesCenter = this.entityManager.playerSpecies.getCenterPosition();
+        console.log('[GameLoop] initialize: Species center position:', speciesCenter);
+        this.renderer.updateCamera(speciesCenter.x, speciesCenter.y);
+        console.log('[GameLoop] initialize: Camera updated to species position');
+      }
+    } catch (error) {
+      console.error('[GameLoop] ERROR: Failed to initialize camera:', error);
+      throw error;
+    }
+
+    try {
+      // Spawn resources
+      console.log('[GameLoop] initialize: About to spawn resources...');
+      this.entityManager.spawnResources();
+      console.log('[GameLoop] initialize: Resources spawned successfully');
+      console.log('[GameLoop] initialize: Resource count:', this.entityManager.getResources().length);
+    } catch (error) {
+      console.error('[GameLoop] ERROR: Failed to spawn resources:', error);
+      throw error;
+    }
 
     // Set up species extinction check (species-level gameplay)
     // Species extinction will be checked in the update loop
@@ -293,7 +421,7 @@ export class GameLoop {
       }, 1000);
     }
 
-    // console.log('Game initialized successfully!');
+    console.log('[GameLoop] initialize: Game initialized successfully!');
   }
 
   // Start the game loop
@@ -370,19 +498,23 @@ export class GameLoop {
         });
         
         // Update camera to species center
+        console.log(`[GameLoop] Before camera update: speciesCenter=(${speciesCenter.x}, ${speciesCenter.y})`);
         this.renderer.updateCamera(speciesCenter.x, speciesCenter.y);
+        console.log(`[GameLoop] After camera update`);
 
         // Update biome rendering around camera (with wider view for species)
-        const canvasWidth = this.renderer.app.canvas.width;
-        const canvasHeight = this.renderer.app.canvas.height;
-        const viewWidth = Math.max(canvasWidth, maxDistance * 2 + 200);
-        const viewHeight = Math.max(canvasHeight, maxDistance * 2 + 200);
+        const { width: visibleWidth, height: visibleHeight } = this.renderer.getWorldViewSize();
+        const viewPadding = Config.BIOME_RENDER_PADDING;
+        const viewWidth = Math.max(visibleWidth, maxDistance * 2 + viewPadding);
+        const viewHeight = Math.max(visibleHeight, maxDistance * 2 + viewPadding);
+        console.log(`[GameLoop] About to call biomeRenderer.render with: center=(${speciesCenter.x}, ${speciesCenter.y}), view=(${viewWidth}x${viewHeight})`);
         this.biomeRenderer.render(
           speciesCenter.x,
           speciesCenter.y,
           viewWidth,
           viewHeight
         );
+        console.log('[GameLoop] biomeRenderer.render completed');
       }
 
       // Check for species extinction
@@ -705,24 +837,57 @@ export class GameLoop {
     // Additional rendering logic can go here
   }
 
+  private setHudLabel(id: string, text: string): void {
+    const element = document.getElementById(id);
+    if (element) {
+      element.textContent = text;
+    }
+  }
+
+  private setHudValue(id: string, value: string | number): void {
+    const element = document.getElementById(id);
+    if (element) {
+      element.textContent = typeof value === 'number' ? `${value}` : value;
+    }
+  }
+
+  private setHudBarRatio(id: string, ratio: number): void {
+    const bar = document.getElementById(id) as HTMLElement | null;
+    if (bar) {
+      const clamped = Math.max(0, Math.min(1, ratio));
+      bar.style.width = `${clamped * 100}%`;
+    }
+  }
+
   // Update HUD elements
   private updateHUD(): void {
     // Species-level HUD
     if (this.entityManager.playerSpecies) {
       const stats = this.entityManager.playerSpecies.getStats();
       const avgTraits = stats.averageTraits as Traits;
-      
-      // Update ATP (average)
-      const atpValue = document.getElementById('atp-value');
-      if (atpValue) {
-        atpValue.textContent = Math.floor(avgTraits.atp || 0).toString();
-      }
+      const averageAtp = avgTraits.atp ?? 0;
+      const maxAtp = avgTraits.maxATP ?? Config.MAX_ATP;
+      const averageHealth = avgTraits.health ?? 0;
+      const maxHealth = avgTraits.maxHealth ?? 100;
 
-      // Update Health (average)
-      const healthValue = document.getElementById('health-value');
-      if (healthValue) {
-        healthValue.textContent = Math.floor(avgTraits.health || 0).toString();
-      }
+      // Update averaged ATP/health bars and labels
+      this.setHudLabel('atp-label', 'Avg ATP (Species):');
+      this.setHudValue('atp-value', Math.round(averageAtp));
+      this.setHudBarRatio('atp-bar', maxAtp > 0 ? averageAtp / maxAtp : 0);
+
+      this.setHudLabel('health-label', 'Avg Health (Species):');
+      this.setHudValue('health-value', Math.round(averageHealth));
+      this.setHudBarRatio('health-bar', maxHealth > 0 ? averageHealth / maxHealth : 0);
+
+      // Repurpose resource stats for species-wide metrics
+      this.setHudLabel('glucose-label', 'Population:');
+      this.setHudValue('glucose-value', stats.population);
+
+      this.setHudLabel('aminoacid-label', 'Avg Survival (s):');
+      this.setHudValue('aminoacid-value', Math.round(stats.averageSurvivalTime || 0));
+
+      this.setHudLabel('phosphate-label', 'Diversity Index:');
+      this.setHudValue('phosphate-value', stats.diversity ? stats.diversity.toFixed(1) : '0.0');
 
       // Update Generation
       const generationValue = document.getElementById('generation-value');
@@ -735,21 +900,6 @@ export class GameLoop {
       if (dnaValue) {
         const baseGenome = this.entityManager.playerSpecies.getBaseGenome();
         dnaValue.textContent = Math.floor(baseGenome.dnaPoints).toString();
-      }
-
-      // Update Population (species size)
-      const populationValue = document.getElementById('population-value');
-      if (populationValue) {
-        populationValue.textContent = stats.population.toString();
-      }
-
-      // Update Time of Day
-      const timeValue = document.getElementById('time-value');
-      if (timeValue) {
-        const time = this.dayNightCycle.getTime();
-        const hours = Math.floor(time);
-        const minutes = Math.floor((time % 1) * 60);
-        timeValue.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
       }
 
       // Evolution button - show when species is ready (based on average survival time)
@@ -772,39 +922,24 @@ export class GameLoop {
     const player = this.entityManager.playerCell;
     if (!player) return;
 
+    this.setHudLabel('atp-label', 'ATP:');
+    this.setHudLabel('health-label', 'Health:');
+    this.setHudLabel('glucose-label', 'Glucose:');
+    this.setHudLabel('aminoacid-label', 'Amino Acids:');
+    this.setHudLabel('phosphate-label', 'Phosphates:');
+
     // Update ATP
-    const atpValue = document.getElementById('atp-value');
-    const atpBar = document.getElementById('atp-bar');
-    if (atpValue && atpBar) {
-      atpValue.textContent = Math.floor(player.traits.atp).toString();
-      const atpPercent = (player.traits.atp / player.traits.maxATP) * 100;
-      atpBar.style.width = `${atpPercent}%`;
-    }
+    this.setHudValue('atp-value', Math.floor(player.traits.atp));
+    this.setHudBarRatio('atp-bar', player.traits.maxATP > 0 ? player.traits.atp / player.traits.maxATP : 0);
 
     // Update Health
-    const healthValue = document.getElementById('health-value');
-    const healthBar = document.getElementById('health-bar');
-    if (healthValue && healthBar) {
-      healthValue.textContent = Math.floor(player.traits.health).toString();
-      const healthPercent = (player.traits.health / player.traits.maxHealth) * 100;
-      healthBar.style.width = `${healthPercent}%`;
-    }
+    this.setHudValue('health-value', Math.floor(player.traits.health));
+    this.setHudBarRatio('health-bar', player.traits.maxHealth > 0 ? player.traits.health / player.traits.maxHealth : 0);
 
     // Update Compounds
-    const glucoseValue = document.getElementById('glucose-value');
-    if (glucoseValue) {
-      glucoseValue.textContent = Math.floor(player.compounds.glucose).toString();
-    }
-
-    const aminoAcidValue = document.getElementById('aminoacid-value');
-    if (aminoAcidValue) {
-      aminoAcidValue.textContent = Math.floor(player.compounds.aminoAcids).toString();
-    }
-
-    const phosphateValue = document.getElementById('phosphate-value');
-    if (phosphateValue) {
-      phosphateValue.textContent = Math.floor(player.compounds.phosphates).toString();
-    }
+    this.setHudValue('glucose-value', Math.floor(player.compounds.glucose));
+    this.setHudValue('aminoacid-value', Math.floor(player.compounds.aminoAcids));
+    this.setHudValue('phosphate-value', Math.floor(player.compounds.phosphates));
 
     // Update Generation
     const generationValue = document.getElementById('generation-value');
@@ -910,13 +1045,23 @@ export class GameLoop {
   }
 
   // Reset game to initial state
-  private resetGame(): void {
+  private resetGame(newSetup?: GameSetupOptions): void {
+    if (newSetup) {
+      this.competitionSetup = this.sanitizeCompetitionSetup(newSetup);
+    } else if (!this.competitionSetup || this.competitionSetup.species.length === 0) {
+      this.competitionSetup = this.sanitizeCompetitionSetup(this.getDefaultCompetitionSetup());
+    }
+
     this.stop();
     this.entityManager.dispose();
     this.historyTracker.reset();
     this.timeControl.reset();
     this.dayNightCycle = new DayNightCycle(Config.DAY_NIGHT_START_TIME, Config.DAY_NIGHT_SPEED_MULTIPLIER);
-    this.entityManager = new EntityManager(this.renderer);
+    this.entityManager = new EntityManager(
+      this.renderer,
+      this.biomeGenerator,
+      this.convertCompetitionSetupToAI(this.competitionSetup)
+    );
     this.entityManager.createPlayerSpecies(); // Species-level gameplay
 
     // Initialize camera to species position
@@ -942,7 +1087,11 @@ export class GameLoop {
       playerGenome.dnaPoints = sim.playerData.genome.dnaPoints;
 
       this.entityManager.dispose();
-      this.entityManager = new EntityManager(this.renderer);
+      this.entityManager = new EntityManager(
+        this.renderer,
+        this.biomeGenerator,
+        this.convertCompetitionSetupToAI(this.competitionSetup)
+      );
       this.entityManager.createPlayerSpecies(playerGenome); // Species-level gameplay
       
       // Initialize camera to species position
@@ -970,6 +1119,18 @@ export class GameLoop {
       this.entityManager.playerCell.genome = creature.genome;
       this.entityManager.playerCell.traits = creature.genome.traits;
     }
+  }
+
+  private getDefaultCompetitionSetup(): GameSetupOptions {
+    return buildDefaultCompetitionSetup();
+  }
+
+  private sanitizeCompetitionSetup(setup?: GameSetupOptions): GameSetupOptions {
+    return sanitizeCompetitionSetup(setup);
+  }
+
+  private convertCompetitionSetupToAI(setup: GameSetupOptions): AISpeciesSetup[] {
+    return convertCompetitionSetupToAI(setup);
   }
 
   // Load settings from storage

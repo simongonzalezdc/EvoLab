@@ -30,7 +30,7 @@ export function getBiomeColorFromAttributes(
 
   // Lightness: depth (lighter = shallow, darker = deep)
   // Depth range: 0 (shallow/light) to 1 (deep/dark)
-  const lightness = 50 - depthLevel * 40; // 50% (shallow) to 10% (deep)
+  let lightness = 50 - depthLevel * 40; // 50% (shallow) to 10% (deep)
 
   // Saturation: affected by nutrients and hazards
   let saturation = 60 + nutrientLevel * 20; // 60-80% based on nutrients
@@ -105,6 +105,11 @@ function hslToHex(h: number, s: number, l: number): number {
   r = Math.round((r + m) * 255);
   g = Math.round((g + m) * 255);
   b = Math.round((b + m) * 255);
+
+  // Ensure values are within valid range
+  r = Math.max(0, Math.min(255, r));
+  g = Math.max(0, Math.min(255, g));
+  b = Math.max(0, Math.min(255, b));
 
   return (r << 16) | (g << 8) | b;
 }

@@ -44,6 +44,9 @@ export const Config = {
   // Biome generation settings
   RARE_BIOME_WEIGHT: 0.15, // 15% chance for rare biomes (CRYSTAL, SWAMP)
   BIOME_TRANSITION_SMOOTHNESS: 0.3, // Lower = smoother transitions (0-1)
+  BIOME_TILE_SIZE: 25, // World units per biome tile (smaller = more detail)
+  BIOME_RENDER_PADDING: 400, // Extra world units rendered beyond the viewport
+  DEBUG_BIOME_RENDERER: false, // Extra logging for biome renderer
 
   // Game loop settings
   TARGET_FPS: 60,

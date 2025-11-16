@@ -7,6 +7,7 @@ import { Resource } from '../entities/Resource';
 export class HerbivoreAI extends AIBehavior {
   private wanderCooldown = 0;
   private wanderDirection = this.wander();
+  private stuckTimer = 0;
 
   constructor(cell: Cell) {
     super(cell, BehaviorType.HERBIVORE);
@@ -46,13 +47,43 @@ export class HerbivoreAI extends AIBehavior {
       }
     }
 
-    // Priority 4: Wander
-    this.wanderCooldown -= deltaTime;
-    if (this.wanderCooldown <= 0) {
-      this.wanderDirection = this.wander();
-      this.wanderCooldown = 2 + Math.random() * 3; // 2-5 seconds
+    // Priority 4: Wander with gentle drifting so they never stagnate
+    this.updateWanderDirection(deltaTime);
+    const speedMagnitude = Math.hypot(this.cell.velocity.x, this.cell.velocity.y);
+    if (speedMagnitude < 0.2) {
+      this.stuckTimer += deltaTime;
+    } else {
+      this.stuckTimer = 0;
     }
 
-    this.cell.applyForce(this.wanderDirection, this.cell.traits.speed * 0.3);
+    if (this.stuckTimer > 1.5) {
+      // Completely refresh direction if we've barely moved for a while
+      this.wanderDirection = this.wander();
+      this.stuckTimer = 0;
+    }
+
+    this.cell.applyForce(this.wanderDirection, Math.max(1, this.cell.traits.speed * 0.6));
+  }
+
+  private updateWanderDirection(deltaTime: number): void {
+    this.wanderCooldown -= deltaTime;
+    if (this.wanderCooldown <= 0) {
+      const target = this.wander();
+      // Smoothly blend towards the new direction to avoid jitter
+      this.wanderDirection = this.blendDirections(this.wanderDirection, target, 0.35);
+      this.wanderCooldown = 1 + Math.random() * 2; // update every 1-3 seconds
+    }
+  }
+
+  private blendDirections(current: { x: number; y: number }, target: { x: number; y: number }, factor: number) {
+    const blended = {
+      x: current.x * (1 - factor) + target.x * factor,
+      y: current.y * (1 - factor) + target.y * factor,
+    };
+    const length = Math.hypot(blended.x, blended.y) || 1;
+    return {
+      x: blended.x / length,
+      y: blended.y / length,
+    };
   }
 }

@@ -67,7 +67,7 @@ export class PhysicsEngine {
   // Set up collision event handlers
   private setupCollisionHandling(): void {
     Matter.Events.on(this.engine, 'collisionStart', (event: Matter.IEventCollision<Matter.Engine>) => {
-      event.pairs.forEach((pair: Matter.IPair) => {
+      event.pairs.forEach((pair: Matter.Pair) => {
         const bodyA = pair.bodyA;
         const bodyB = pair.bodyB;
 
@@ -86,7 +86,7 @@ export class PhysicsEngine {
   private handleCollision(
     entityA: PhysicsBody,
     entityB: PhysicsBody,
-    pair: Matter.IPair
+    pair: Matter.Pair
   ): void {
     // Calculate collision force based on relative velocity
     const relativeVelocity = Matter.Vector.sub(entityA.body.velocity, entityB.body.velocity);

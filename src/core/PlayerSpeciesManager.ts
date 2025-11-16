@@ -5,6 +5,7 @@ import { Cell } from '../entities/Cell';
 import { Resource } from '../entities/Resource';
 import { Genome } from '../genetics/Genome';
 import { PixiApp } from '../rendering/PixiApp';
+import { BiomeGenerator } from '../environment/BiomeGenerator';
 import { Config } from './Config';
 import { AutoPilot } from './AutoPilot';
 import type { Traits } from '../types/entities';
@@ -28,11 +29,11 @@ export class PlayerSpeciesManager {
   private speciesColor: number;
   private initialPopulationSize = 15; // Increased for better visibility
 
-  constructor(renderer: PixiApp, initialGenome?: Genome) {
+  constructor(renderer: PixiApp, biomeGenerator: BiomeGenerator, initialGenome?: Genome) {
     this.renderer = renderer;
     this.baseGenome = initialGenome || Genome.createDefault();
     this.speciesColor = this.baseGenome.traits.color;
-    this.autoPilot = new AutoPilot();
+    this.autoPilot = new AutoPilot(biomeGenerator);
   }
 
   // Initialize the species with starting population
@@ -75,6 +76,9 @@ export class PlayerSpeciesManager {
       // Ensure sprite position matches cell position
       cell.sprite.x = cell.position.x;
       cell.sprite.y = cell.position.y;
+      
+      console.log(`[PlayerSpeciesManager] Created cell ${i} at (${x}, ${y}), sprite at (${sprite.x}, ${sprite.y}), radius: ${radius}, color: 0x${genome.traits.color.toString(16)}`);
+      console.log(`[PlayerSpeciesManager] Cell sprite visible: ${sprite.visible}, alpha: ${sprite.alpha}, parent: ${sprite.parent ? 'has parent' : 'no parent'}`);
       
       this.cells.push(cell);
     }
@@ -156,6 +160,9 @@ export class PlayerSpeciesManager {
         const parent1 = readyCells[i];
         const parent2 = readyCells[i + 1];
         
+        // Ensure parents exist
+        if (!parent1 || !parent2) continue;
+        
         // Create offspring
         const offspringGenome = parent1.genome.clone();
         // Mix traits from both parents
@@ -206,7 +213,7 @@ export class PlayerSpeciesManager {
         if (newValue !== undefined && typeof newValue === 'number') {
           // Gradually shift toward new trait value
           const currentValue = cell.traits[traitKey] as number;
-          cell.traits[traitKey] = currentValue + (newValue - currentValue) * 0.1;
+          (cell.traits as any)[traitKey] = currentValue + (newValue - currentValue) * 0.1;
         }
       });
       cell.genome.traits = cell.traits;
@@ -245,17 +252,21 @@ export class PlayerSpeciesManager {
 
     Object.keys(traitValues).forEach(key => {
       const values = traitValues[key];
-      const avg = values.reduce((a, b) => a + b, 0) / values.length;
-      (avgTraits as any)[key] = avg;
+      if (values && values.length > 0) {
+        const avg = values.reduce((a, b) => a + b, 0) / values.length;
+        (avgTraits as any)[key] = avg;
+      }
     });
 
     // Calculate diversity (standard deviation of traits)
     let diversity = 0;
     Object.keys(traitValues).forEach(key => {
       const values = traitValues[key];
-      const avg = values.reduce((a, b) => a + b, 0) / values.length;
-      const variance = values.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / values.length;
-      diversity += Math.sqrt(variance);
+      if (values && values.length > 0) {
+        const avg = values.reduce((a, b) => a + b, 0) / values.length;
+        const variance = values.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / values.length;
+        diversity += Math.sqrt(variance);
+      }
     });
     diversity /= Object.keys(traitValues).length;
 

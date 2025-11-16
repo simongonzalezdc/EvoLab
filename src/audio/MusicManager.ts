@@ -27,6 +27,106 @@ export interface MusicPreset {
   bpm: number;
 }
 
+interface ToneProfile {
+  ambient: string[];
+  scale: string[];
+  mildTension?: string[];
+}
+
+const DEFAULT_TONE_PROFILE: ToneProfile = {
+  ambient: ['C3', 'D3', 'E3', 'G3', 'A3', 'C4'],
+  scale: ['C4', 'D4', 'E4', 'G4', 'A4', 'C5'],
+  mildTension: ['F4'],
+};
+
+const MIN_NOTE_OCTAVE = 2;
+
+const clampNoteToMinOctave = (note: string, minOctave = MIN_NOTE_OCTAVE): string => {
+  const match = note.match(/^([A-Ga-g])(#{1}|b)?(\d+)$/);
+  if (!match) {
+    return note;
+  }
+
+  const letter = match[1];
+  const accidental = match[2] ?? '';
+  const octaveStr = match[3];
+  if (!letter || !octaveStr) {
+    return note;
+  }
+
+  const octave = parseInt(octaveStr, 10);
+  if (Number.isNaN(octave)) {
+    return `${letter.toUpperCase()}${accidental}${octaveStr}`;
+  }
+
+  const clampedOctave = Math.max(octave, minOctave);
+  return `${letter.toUpperCase()}${accidental}${clampedOctave}`;
+};
+
+const sanitizeNotes = (notes: string[]): string[] => notes.map(note => clampNoteToMinOctave(note));
+
+const TONE_PROFILES: Record<BiomeType, ToneProfile> = {
+  [BiomeType.SHALLOW_WARM]: {
+    ambient: ['C3', 'D3', 'E3', 'G3', 'A3', 'C4'],
+    scale: ['C4', 'D4', 'E4', 'G4', 'A4', 'C5'],
+    mildTension: ['F4'],
+  },
+  [BiomeType.SHALLOW_COLD]: {
+    ambient: ['C3', 'Eb3', 'F3', 'G3', 'Bb3', 'C4'],
+    scale: ['C4', 'Eb4', 'F4', 'G4', 'Bb4', 'C5'],
+    mildTension: ['D4'],
+  },
+  [BiomeType.DEEP_WARM]: {
+    ambient: ['C2', 'D2', 'E2', 'G2', 'A2', 'C3'],
+    scale: ['C3', 'D3', 'E3', 'G3', 'A3', 'C4'],
+    mildTension: ['B3'],
+  },
+  [BiomeType.DEEP_COLD]: {
+    ambient: ['C2', 'Eb2', 'F2', 'G2', 'Bb2', 'C3'],
+    scale: ['C3', 'Eb3', 'F3', 'G3', 'Bb3', 'C4'],
+    mildTension: ['D3'],
+  },
+  [BiomeType.TOXIC]: {
+    ambient: ['C#3', 'E3', 'F#3', 'G#3', 'B3', 'C#4'],
+    scale: ['C#4', 'E4', 'F#4', 'G#4', 'B4', 'C#5'],
+    mildTension: ['D4', 'A4'],
+  },
+  [BiomeType.NUTRIENT_RICH]: {
+    ambient: ['C3', 'D3', 'E3', 'G3', 'A3', 'C4'],
+    scale: ['C4', 'D4', 'E4', 'G4', 'A4', 'C5'],
+    mildTension: ['B4'],
+  },
+  [BiomeType.BARREN]: {
+    ambient: ['C3', 'Eb3', 'G3', 'Bb3', 'C4'],
+    scale: ['C4', 'Eb4', 'G4', 'Bb4', 'C5'],
+    mildTension: ['F4'],
+  },
+  [BiomeType.VOLCANIC]: {
+    ambient: ['D3', 'F3', 'A3', 'C4', 'D4', 'F4'],
+    scale: ['D4', 'F4', 'A4', 'C5', 'D5'],
+    mildTension: ['G4'],
+  },
+  [BiomeType.FROZEN]: {
+    ambient: ['C3', 'D3', 'G3', 'A3', 'C4', 'D4'],
+    scale: ['C4', 'D4', 'G4', 'A4', 'C5', 'D5'],
+    mildTension: ['E4'],
+  },
+  [BiomeType.SWAMP]: {
+    ambient: ['C3', 'Eb3', 'G3', 'Bb3', 'D4', 'F4'],
+    scale: ['C4', 'Eb4', 'G4', 'Bb4', 'D5', 'F5'],
+  },
+  [BiomeType.CRYSTAL]: {
+    ambient: ['C3', 'E3', 'G3', 'B3', 'D4', 'E4'],
+    scale: ['C4', 'E4', 'G4', 'A4', 'B4', 'D5', 'E5'],
+    mildTension: ['F#4'],
+  },
+  [BiomeType.ABYSS]: {
+    ambient: ['C1', 'Eb1', 'G1', 'Bb1', 'C2', 'Eb2'],
+    scale: ['C3', 'Eb3', 'F3', 'G3', 'Bb3', 'C4'],
+    mildTension: ['Db3'],
+  },
+} as const;
+
 export class MusicManager {
   private isEnabled = false;
   private isInitialized = false;
@@ -56,6 +156,7 @@ export class MusicManager {
   private ambientLoop: Tone.Loop | null = null;
   private melodyLoop: Tone.Loop | null = null;
   private bassLoop: Tone.Loop | null = null;
+  private ambientChordSeed = 0;
 
   // State
   private currentState: MusicState = {
@@ -229,12 +330,23 @@ export class MusicManager {
     if (this.isInitialized) return;
 
     try {
-      await Tone.start();
-      await this.reverb.generate();
+      // Try to start audio context, but don't block if it fails
+      // Modern browsers require user interaction for audio
+      const startPromise = Tone.start();
+      const reverbPromise = this.reverb.generate();
+      
+      // Set a timeout to avoid hanging
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Audio initialization timeout')), 2000);
+      });
+      
+      await Promise.race([startPromise, reverbPromise, timeoutPromise]);
       this.isInitialized = true;
-      // Music manager successfully initialized
+      console.log('MusicManager: Audio initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize MusicManager:', error);
+      console.warn('MusicManager: Audio initialization failed (will retry on user interaction):', error);
+      // Don't throw - allow game to continue without audio
+      this.isInitialized = false;
     }
   }
 
@@ -246,7 +358,19 @@ export class MusicManager {
     if (this.isEnabled) return;
 
     this.isEnabled = true;
-    await Tone.start();
+    
+    // Try to start audio again on user interaction
+    if (!this.isInitialized) {
+      try {
+        await Tone.start();
+        await this.reverb.generate();
+        this.isInitialized = true;
+        console.log('MusicManager: Audio initialized on user interaction');
+      } catch (error) {
+        console.warn('MusicManager: Still failed to initialize audio:', error);
+      }
+    }
+    
     this.startMusic();
   }
 
@@ -319,19 +443,9 @@ export class MusicManager {
     this.ambientLoop = new Tone.Loop((time) => {
       if (!this.isEnabled) return;
 
-      // Play 2-3 notes at once for richness
-      const numNotes = Math.random() > 0.5 ? 2 : 3;
-      const selectedNotes: string[] = [];
-
-      for (let i = 0; i < numNotes; i++) {
-        const note = notes[Math.floor(Math.random() * notes.length)];
-        if (note) {
-          selectedNotes.push(note);
-        }
-      }
-
-      if (selectedNotes.length > 0) {
-        this.ambientSynth.triggerAttackRelease(selectedNotes, '2n', time);
+      const chord = this.buildAmbientChord(notes);
+      if (chord.length > 0) {
+        this.ambientSynth.triggerAttackRelease(chord, '2n', time);
       }
     }, interval);
 
@@ -389,108 +503,90 @@ export class MusicManager {
   }
 
   private getBiomeAmbientNotes(): string[] {
-    // Different note sets for different biomes
-    switch (this.currentState.biome) {
-      case BiomeType.SHALLOW_WARM:
-        return ['C3', 'E3', 'G3', 'B3', 'D4', 'F#4']; // Major 6th, bright
-
-      case BiomeType.SHALLOW_COLD:
-        return ['C3', 'Eb3', 'G3', 'Bb3', 'D4', 'F4']; // Minor, cooler
-
-      case BiomeType.DEEP_WARM:
-        return ['C2', 'E2', 'G2', 'A2', 'C3', 'E3']; // Lower, warm
-
-      case BiomeType.DEEP_COLD:
-        return ['C2', 'Eb2', 'F2', 'Ab2', 'C3', 'Eb3']; // Low, mysterious
-
-      case BiomeType.TOXIC:
-        return ['C#3', 'E3', 'F#3', 'A3', 'C4', 'D#4']; // Dissonant, eerie
-
-      case BiomeType.NUTRIENT_RICH:
-        return ['C3', 'D3', 'E3', 'G3', 'A3', 'C4', 'D4']; // Major scale, lively
-
-      case BiomeType.BARREN:
-        return ['C3', 'Eb3', 'F3', 'Ab3', 'C4']; // Sparse, minor
-
-      case BiomeType.VOLCANIC:
-        return ['D3', 'F#3', 'A3', 'C4', 'E4', 'F#4']; // Intense, aggressive
-
-      case BiomeType.FROZEN:
-        return ['C3', 'Eb3', 'Gb3', 'Ab3', 'C4', 'Eb4']; // Cold, sparse, diminished
-
-      case BiomeType.SWAMP:
-        return ['C3', 'D3', 'Eb3', 'G3', 'Ab3', 'Bb3']; // Murky, blues-like
-
-      case BiomeType.CRYSTAL:
-        return ['C3', 'E3', 'F#3', 'G#3', 'B3', 'C4', 'E4']; // Bright, crystalline
-
-      case BiomeType.ABYSS:
-        return ['C2', 'Db2', 'Eb2', 'Gb2', 'Ab2', 'C3']; // Very low, dark, dissonant
-
-      default:
-        return ['C3', 'E3', 'G3', 'B3'];
-    }
+    const profile = this.getToneProfile();
+    return this.extendWithTension(profile.ambient, profile.mildTension, 0.2);
   }
 
   private getBiomeBassNote(): string {
     const isDeep = this.currentState.biome.includes('deep');
 
-    switch (this.currentState.biome) {
-      case BiomeType.TOXIC:
-        return isDeep ? 'C#1' : 'C#2';
-      case BiomeType.VOLCANIC:
-        return 'D1'; // Powerful, deep
-      case BiomeType.FROZEN:
-        return 'C1'; // Very low and cold
-      case BiomeType.SWAMP:
-        return 'C1'; // Deep murky drone
-      case BiomeType.CRYSTAL:
-        return 'C2'; // Higher, crystalline
-      case BiomeType.ABYSS:
-        return 'C0'; // Extremely deep
-      default:
-        return isDeep ? 'C1' : 'C2';
-    }
+    const note = (() => {
+      switch (this.currentState.biome) {
+        case BiomeType.TOXIC:
+          return isDeep ? 'C#1' : 'C#2';
+        case BiomeType.VOLCANIC:
+          return 'D1'; // Powerful, deep
+        case BiomeType.FROZEN:
+          return 'C1'; // Very low and cold
+        case BiomeType.SWAMP:
+          return 'C1'; // Deep murky drone
+        case BiomeType.CRYSTAL:
+          return 'C2'; // Higher, crystalline
+        case BiomeType.ABYSS:
+          return 'C0'; // Extremely deep
+        default:
+          return isDeep ? 'C1' : 'C2';
+      }
+    })();
+
+    return clampNoteToMinOctave(note);
   }
 
   private getBiomeScale(): string[] {
-    // Melody scales based on biome mood
-    switch (this.currentState.biome) {
-      case BiomeType.SHALLOW_WARM:
-      case BiomeType.NUTRIENT_RICH:
-        return ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5']; // C Major
+    const profile = this.getToneProfile();
+    return this.extendWithTension(profile.scale, profile.mildTension, 0.3);
+  }
 
-      case BiomeType.SHALLOW_COLD:
-      case BiomeType.BARREN:
-        return ['C4', 'D4', 'Eb4', 'F4', 'G4', 'Ab4', 'Bb4', 'C5']; // C Minor
+  private getToneProfile(): ToneProfile {
+    const baseProfile = TONE_PROFILES[this.currentState.biome] || DEFAULT_TONE_PROFILE;
+    return {
+      ambient: sanitizeNotes(baseProfile.ambient),
+      scale: sanitizeNotes(baseProfile.scale),
+      mildTension: baseProfile.mildTension ? sanitizeNotes(baseProfile.mildTension) : undefined,
+    };
+  }
 
-      case BiomeType.DEEP_WARM:
-        return ['C4', 'D4', 'E4', 'F#4', 'G4', 'A4', 'B4']; // C Lydian (ethereal)
-
-      case BiomeType.DEEP_COLD:
-        return ['C4', 'D4', 'Eb4', 'F4', 'G4', 'Ab4', 'Bb4']; // C Dorian (mysterious)
-
-      case BiomeType.TOXIC:
-        return ['C4', 'Db4', 'E4', 'F4', 'G4', 'Ab4', 'B4']; // C Altered (tense)
-
-      case BiomeType.VOLCANIC:
-        return ['D4', 'E4', 'F#4', 'G4', 'A4', 'C5', 'D5']; // D Major (bright, aggressive)
-
-      case BiomeType.FROZEN:
-        return ['C4', 'Db4', 'Eb4', 'Gb4', 'Ab4', 'Bb4']; // Whole tone (ethereal, frozen)
-
-      case BiomeType.SWAMP:
-        return ['C4', 'Eb4', 'F4', 'Gb4', 'G4', 'Bb4']; // Blues scale (murky)
-
-      case BiomeType.CRYSTAL:
-        return ['C4', 'D4', 'E4', 'F#4', 'G#4', 'A#4', 'B4', 'C5']; // C Lydian Augmented (bright, shimmering)
-
-      case BiomeType.ABYSS:
-        return ['C4', 'Db4', 'Eb4', 'Fb4', 'Gb4', 'Ab4']; // Diminished (dark, oppressive)
-
-      default:
-        return ['C4', 'D4', 'E4', 'G4', 'A4', 'C5']; // Pentatonic
+  private extendWithTension(base: string[], tension?: string[], chance = 0.2): string[] {
+    const pool = [...base];
+    if (tension && tension.length > 0 && Math.random() < chance) {
+      pool.push(...tension);
     }
+    return pool;
+  }
+
+  private buildAmbientChord(notes: string[]): string[] {
+    if (notes.length === 0) {
+      return [];
+    }
+
+    const uniqueNotes: string[] = Array.from(new Set<string>(notes));
+    if (uniqueNotes.length === 0) {
+      return [];
+    }
+
+    // Drift root gradually so the pad feels smooth
+    const drift = Math.floor(Math.random() * 3) - 1; // -1, 0, 1
+    this.ambientChordSeed = (this.ambientChordSeed + drift + uniqueNotes.length) % uniqueNotes.length;
+    const rootIndex = this.ambientChordSeed;
+
+    const pickNote = (offset: number): string => {
+      const index = (rootIndex + offset + uniqueNotes.length) % uniqueNotes.length;
+      return uniqueNotes[index] ?? uniqueNotes[0]!;
+    };
+
+    const chord: string[] = [];
+    const addNote = (offset: number) => {
+      const note = pickNote(offset);
+      if (!chord.includes(note)) {
+        chord.push(note);
+      }
+    };
+
+    addNote(0);
+    addNote(2);
+    addNote(4);
+
+    return chord;
   }
 
   private getAmbientInterval(): Tone.Unit.Time {

@@ -99,6 +99,11 @@ export class BiomeGenerator {
     const color = getBiomeColorFromAttributes(normalizedTemp, normalizedDepth, hazardType, normalizedNutrients);
     const hazards = this.calculateHazards(type, temperature, depth, nx, ny);
 
+    // Debug logging
+    if (Config.DEBUG_AUTO_PILOT) {
+      console.log(`[BiomeGenerator] Biome at (${x},${y}): ${type}, temp=${temperature.toFixed(1)}, depth=${depth.toFixed(1)}, color=0x${color.toString(16).padStart(6, '0')}`);
+    }
+
     return {
       type,
       temperature,

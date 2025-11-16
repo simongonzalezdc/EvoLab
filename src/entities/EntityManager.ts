@@ -3,11 +3,12 @@
 import { Cell } from './Cell';
 import { Resource } from './Resource';
 import { PixiApp } from '../rendering/PixiApp';
+import { BiomeGenerator } from '../environment/BiomeGenerator';
 import { Config } from '../core/Config';
 import { Genome } from '../genetics/Genome';
 import { ReproductionSystem } from '../genetics/ReproductionSystem';
 import { TraitSystem } from '../genetics/TraitSystem';
-import { PopulationManager } from '../ai/PopulationManager';
+import { PopulationManager, type AISpeciesSetup } from '../ai/PopulationManager';
 import { CombatSystem } from './CombatSystem';
 import { PlayerSpeciesManager } from '../core/PlayerSpeciesManager';
 import type { Traits } from '../types/entities';
@@ -16,6 +17,7 @@ export class EntityManager {
   private cells: Map<string, Cell> = new Map();
   private resources: Map<string, Resource> = new Map();
   private renderer: PixiApp;
+  private biomeGenerator: BiomeGenerator;
   public playerCell: Cell | null = null; // Keep for backward compatibility, but deprecated
   public playerSpecies: PlayerSpeciesManager | null = null;
   public glucoseCollected = 0;
@@ -23,20 +25,25 @@ export class EntityManager {
   public populationManager: PopulationManager;
   public combatSystem: CombatSystem;
 
-  constructor(renderer: PixiApp) {
+  constructor(renderer: PixiApp, biomeGenerator: BiomeGenerator, aiSpeciesSetup?: AISpeciesSetup[]) {
     this.renderer = renderer;
     this.reproductionSystem = new ReproductionSystem();
     this.populationManager = new PopulationManager(renderer, Config.LAKE_WIDTH, Config.LAKE_HEIGHT);
     this.combatSystem = new CombatSystem();
+    this.biomeGenerator = biomeGenerator;
 
     // Initialize AI species
-    this.populationManager.initializeDefaultSpecies();
+    if (aiSpeciesSetup && aiSpeciesSetup.length > 0) {
+      this.populationManager.initializeCustomSpecies(aiSpeciesSetup);
+    } else {
+      this.populationManager.initializeDefaultSpecies();
+    }
   }
 
   // Create player species from genome
   createPlayerSpecies(genome?: Genome): PlayerSpeciesManager {
     const playerGenome = genome || Genome.createDefault();
-    this.playerSpecies = new PlayerSpeciesManager(this.renderer, playerGenome);
+    this.playerSpecies = new PlayerSpeciesManager(this.renderer, this.biomeGenerator, playerGenome);
     this.playerSpecies.initialize();
     return this.playerSpecies;
   }

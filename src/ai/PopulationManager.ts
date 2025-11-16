@@ -20,6 +20,13 @@ interface Species {
   maxPopulation: number;
 }
 
+export interface AISpeciesSetup {
+  name?: string;
+  type: BehaviorType;
+  population: number;
+  color?: number;
+}
+
 export class PopulationManager {
   private species: Map<string, Species> = new Map();
   private renderer: PixiApp;
@@ -54,36 +61,47 @@ export class PopulationManager {
     });
   }
 
-  // Initialize default species
+  // Initialize default species or apply a custom configuration
   initializeDefaultSpecies(): void {
-    // Herbivore species - small, fast, timid
-    const herbivoreGenome = Genome.createDefault();
-    herbivoreGenome.traits.size = Config.HERBIVORE_SIZE;
-    herbivoreGenome.traits.speed = 7;
-    herbivoreGenome.traits.aggression = 2;
-    herbivoreGenome.traits.fearResponse = 8;
-    herbivoreGenome.traits.color = Config.HERBIVORE_COLOR;
-    this.registerSpecies('Herbivore', BehaviorType.HERBIVORE, herbivoreGenome, Config.HERBIVORE_COLOR, Config.HERBIVORE_POPULATION);
+    this.initializeCustomSpecies([
+      {
+        name: 'Herbivore',
+        type: BehaviorType.HERBIVORE,
+        population: Config.HERBIVORE_POPULATION,
+        color: Config.HERBIVORE_COLOR,
+      },
+      {
+        name: 'Carnivore',
+        type: BehaviorType.CARNIVORE,
+        population: Config.CARNIVORE_POPULATION,
+        color: Config.CARNIVORE_COLOR,
+      },
+      {
+        name: 'Omnivore',
+        type: BehaviorType.OMNIVORE,
+        population: Config.OMNIVORE_POPULATION,
+        color: Config.OMNIVORE_COLOR,
+      },
+    ]);
+  }
 
-    // Carnivore species - medium, aggressive
-    const carnivoreGenome = Genome.createDefault();
-    carnivoreGenome.traits.size = Config.CARNIVORE_SIZE;
-    carnivoreGenome.traits.speed = 6;
-    carnivoreGenome.traits.aggression = 8;
-    carnivoreGenome.traits.fearResponse = 3;
-    carnivoreGenome.traits.toxinStrength = 3;
-    carnivoreGenome.traits.color = Config.CARNIVORE_COLOR;
-    this.registerSpecies('Carnivore', BehaviorType.CARNIVORE, carnivoreGenome, Config.CARNIVORE_COLOR, Config.CARNIVORE_POPULATION);
+  initializeCustomSpecies(setups?: AISpeciesSetup[]): void {
+    this.resetSpecies();
 
-    // Omnivore species - balanced
-    const omnivoreGenome = Genome.createDefault();
-    omnivoreGenome.traits.size = Config.OMNIVORE_SIZE;
-    omnivoreGenome.traits.speed = 6;
-    omnivoreGenome.traits.aggression = 5;
-    omnivoreGenome.traits.fearResponse = 5;
-    omnivoreGenome.traits.intelligence = 6;
-    omnivoreGenome.traits.color = Config.OMNIVORE_COLOR;
-    this.registerSpecies('Omnivore', BehaviorType.OMNIVORE, omnivoreGenome, Config.OMNIVORE_COLOR, Config.OMNIVORE_POPULATION);
+    if (!setups || setups.length === 0) {
+      this.initializeDefaultSpecies();
+      return;
+    }
+
+    setups.forEach((setup, index) => {
+      const type = setup.type;
+      const baseGenome = this.createBaseGenome(type);
+      const color = setup.color ?? this.getDefaultColor(type);
+      baseGenome.traits.color = color;
+      const safePopulation = Math.max(1, Math.floor(setup.population));
+      const name = setup.name || `${this.getTypeLabel(type)} ${index + 1}`;
+      this.registerSpecies(name, type, baseGenome, color, safePopulation);
+    });
   }
 
   // Update all AI cells
@@ -210,12 +228,73 @@ export class PopulationManager {
   }
 
   dispose(): void {
+    this.resetSpecies();
+  }
+
+  private resetSpecies(): void {
     for (const species of this.species.values()) {
       for (const cell of species.population) {
-        cell.dispose();
+        this.renderer.removeFromWorld(cell.sprite);
       }
     }
     this.species.clear();
     this.aiBehaviors.clear();
+  }
+
+  private createBaseGenome(type: BehaviorType): Genome {
+    const genome = Genome.createDefault();
+
+    switch (type) {
+      case BehaviorType.CARNIVORE:
+        genome.traits.size = Config.CARNIVORE_SIZE;
+        genome.traits.speed = 6;
+        genome.traits.aggression = 8;
+        genome.traits.fearResponse = 3;
+        genome.traits.toxinStrength = 3;
+        genome.traits.color = Config.CARNIVORE_COLOR;
+        break;
+      case BehaviorType.OMNIVORE:
+        genome.traits.size = Config.OMNIVORE_SIZE;
+        genome.traits.speed = 6;
+        genome.traits.aggression = 5;
+        genome.traits.fearResponse = 5;
+        genome.traits.intelligence = 6;
+        genome.traits.color = Config.OMNIVORE_COLOR;
+        break;
+      case BehaviorType.HERBIVORE:
+      default:
+        genome.traits.size = Config.HERBIVORE_SIZE;
+        genome.traits.speed = 7;
+        genome.traits.aggression = 2;
+        genome.traits.fearResponse = 8;
+        genome.traits.color = Config.HERBIVORE_COLOR;
+        break;
+    }
+
+    return genome;
+  }
+
+  private getDefaultColor(type: BehaviorType): number {
+    switch (type) {
+      case BehaviorType.CARNIVORE:
+        return Config.CARNIVORE_COLOR;
+      case BehaviorType.OMNIVORE:
+        return Config.OMNIVORE_COLOR;
+      case BehaviorType.HERBIVORE:
+      default:
+        return Config.HERBIVORE_COLOR;
+    }
+  }
+
+  private getTypeLabel(type: BehaviorType): string {
+    switch (type) {
+      case BehaviorType.CARNIVORE:
+        return 'Carnivore';
+      case BehaviorType.OMNIVORE:
+        return 'Omnivore';
+      case BehaviorType.HERBIVORE:
+      default:
+        return 'Herbivore';
+    }
   }
 }

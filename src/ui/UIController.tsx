@@ -18,11 +18,26 @@ import { PhylogeneticTreePanel } from './components/PhylogeneticTreePanel';
 import { BiomeLegend } from './components/BiomeLegend';
 import { ZoomControls } from './components/ZoomControls';
 import { MusicDevTools } from './components/MusicDevTools';
+import { GameSetupPanel } from './components/GameSetupPanel';
 import type { Traits, Species } from '../types/entities';
 import type { TimeControl } from '../core/TimeControl';
 import type { SaveSystem, GameSettings, SavedSimulation, SavedCreature } from '../data/SaveSystem';
 import type { PopulationDataPoint, LineageNode } from '../data/HistoryTracker';
 import type { Achievement, Challenge } from '../achievements/AchievementSystem';
+import { Config } from '../core/Config';
+import type { GameSetupOptions, SpeciesSetupOption } from '../types/game';
+
+const createSpeciesSetup = (type: SpeciesSetupOption['type'], population: number): SpeciesSetupOption => ({
+  id: `${type}-${Math.random().toString(36).slice(2)}`,
+  type,
+  population,
+});
+
+const getDefaultSpeciesSetup = (): SpeciesSetupOption[] => [
+  createSpeciesSetup('herbivore', Config.HERBIVORE_POPULATION),
+  createSpeciesSetup('carnivore', Config.CARNIVORE_POPULATION),
+  createSpeciesSetup('omnivore', Config.OMNIVORE_POPULATION),
+];
 
 interface PhylogeneticNode {
   speciesId: string;
@@ -44,6 +59,7 @@ interface UIState {
   showPhylogeneticTree: boolean;
   showBiomeLegend: boolean;
   showMusicDevTools: boolean;
+  showGameSetup: boolean;
   deathCause: 'atp' | 'health';
   currentTraits: Traits | null;
   physicsEnabled: boolean;
@@ -65,6 +81,7 @@ interface UIState {
   achievements: Achievement[];
   challenges: Challenge[];
   achievementNotifications: Achievement[];
+  gameSetupSpecies: SpeciesSetupOption[];
 }
 
 export class UIController {
@@ -72,7 +89,7 @@ export class UIController {
   private setState: React.Dispatch<React.SetStateAction<UIState>> | null = null;
   private onApplyModifications: ((mods: Partial<Traits>) => void) | null = null;
   private onContinue: (() => void) | null = null;
-  private onNewGame: (() => void) | null = null;
+  private onNewGame: ((options?: GameSetupOptions) => void) | null = null;
   private onRestart: (() => void) | null = null;
   private onLoadSimulation: ((sim: SavedSimulation) => void) | null = null;
   private onLoadCreature: ((creature: SavedCreature) => void) | null = null;
@@ -118,6 +135,7 @@ export class UIController {
         showPhylogeneticTree: false,
         showBiomeLegend: true, // Default: visible
         showMusicDevTools: false,
+        showGameSetup: false,
         deathCause: 'atp',
         currentTraits: null,
         physicsEnabled: false,
@@ -139,6 +157,7 @@ export class UIController {
         achievements: [],
         challenges: [],
         achievementNotifications: [],
+        gameSetupSpecies: getDefaultSpeciesSetup(),
       });
 
       useEffect(() => {
@@ -163,10 +182,50 @@ export class UIController {
         this.onContinue?.();
       };
 
+      const handleSpeciesSlotUpdate = (id: string, updates: Partial<SpeciesSetupOption>) => {
+        setState(s => ({
+          ...s,
+          gameSetupSpecies: s.gameSetupSpecies.map(spec =>
+            spec.id === id ? { ...spec, ...updates } : spec
+          ),
+        }));
+      };
+
+      const handleAddSpeciesSlot = () => {
+        setState(s => {
+          if (s.gameSetupSpecies.length >= 6) return s;
+          return {
+            ...s,
+            gameSetupSpecies: [...s.gameSetupSpecies, createSpeciesSetup('herbivore', 12)],
+          };
+        });
+      };
+
+      const handleRemoveSpeciesSlot = (id: string) => {
+        setState(s => {
+          if (s.gameSetupSpecies.length <= 1) return s;
+          return {
+            ...s,
+            gameSetupSpecies: s.gameSetupSpecies.filter(spec => spec.id !== id),
+          };
+        });
+      };
+
       const handleNewGame = () => {
-        if (confirm('Start a new game? Current progress will be lost.')) {
-          this.onNewGame?.();
-        }
+        setState(s => ({ ...s, showGameSetup: true }));
+      };
+
+      const handleCancelGameSetup = () => {
+        setState(s => ({ ...s, showGameSetup: false }));
+      };
+
+      const handleStartGame = () => {
+        if (state.gameSetupSpecies.length === 0) return;
+        const options: GameSetupOptions = {
+          species: state.gameSetupSpecies.map(spec => ({ ...spec })),
+        };
+        setState(s => ({ ...s, showGameSetup: false }));
+        this.onNewGame?.(options);
       };
 
       const handleLoadSimulation = (sim: SavedSimulation) => {
@@ -318,6 +377,17 @@ export class UIController {
             />
           )}
 
+          {/* Game Setup Modal */}
+          <GameSetupPanel
+            isOpen={state.showGameSetup}
+            species={state.gameSetupSpecies}
+            onUpdateSpecies={handleSpeciesSlotUpdate}
+            onAddSpecies={handleAddSpeciesSlot}
+            onRemoveSpecies={handleRemoveSpeciesSlot}
+            onStart={handleStartGame}
+            onCancel={handleCancelGameSetup}
+          />
+
           {/* Settings Modal */}
           {state.showSettings && (
             <SettingsPanel
@@ -447,7 +517,7 @@ export class UIController {
     this.onContinue = callback;
   }
 
-  setNewGameCallback(callback: () => void) {
+  setNewGameCallback(callback: (options?: GameSetupOptions) => void) {
     this.onNewGame = callback;
   }
 

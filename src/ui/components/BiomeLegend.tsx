@@ -47,6 +47,29 @@ export const BiomeLegend: React.FC<BiomeLegendProps> = ({ onToggle, onBiomeHover
     onBiomeHover?.(biome);
   };
 
+  const legendKeyItems = [
+    {
+      icon: '🔥 / ❄️',
+      label: 'Temperature',
+      description: 'Orange bars mean warm water, blue bars mean cold currents.',
+    },
+    {
+      icon: '🌊',
+      label: 'Depth',
+      description: 'Longer bars = deeper, darker tiles on the map.',
+    },
+    {
+      icon: '🌱',
+      label: 'Nutrients',
+      description: 'Shows how much food the biome can support.',
+    },
+    {
+      icon: '☢️',
+      label: 'Toxicity',
+      description: 'Appears only when hazards like toxins or radiation are present.',
+    },
+  ];
+
   const renderBiomeRow = (biome: BiomeInfo) => {
     const isHovered = hoveredBiome === biome.type;
     
@@ -245,6 +268,33 @@ export const BiomeLegend: React.FC<BiomeLegendProps> = ({ onToggle, onBiomeHover
 
       {!isCollapsed && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+          <div
+            style={{
+              backgroundColor: 'rgba(76, 175, 80, 0.08)',
+              border: '1px solid rgba(76, 175, 80, 0.3)',
+              borderRadius: '6px',
+              padding: '10px',
+              fontSize: '12px',
+              lineHeight: 1.4,
+            }}
+          >
+            <div style={{ color: '#4caf50', fontWeight: 'bold', marginBottom: '6px' }}>
+              How to read the legend
+            </div>
+            <div style={{ color: '#ccc', marginBottom: '8px' }}>
+              Hover any biome to highlight its tiles on the map. Colored bars show intensity, and hazard tags warn you about threats.
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {legendKeyItems.map(item => (
+                <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#bbb' }}>
+                  <span style={{ fontSize: '12px' }}>{item.icon}</span>
+                  <span style={{ fontWeight: 'bold', color: '#4caf50' }}>{item.label}:</span>
+                  <span style={{ fontSize: '11px', color: '#ccc' }}>{item.description}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Shallow Biomes */}
           {shallowBiomes.length > 0 && (
             <div>

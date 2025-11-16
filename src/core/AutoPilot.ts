@@ -3,14 +3,20 @@
 
 import { Cell } from '../entities/Cell';
 import { Resource } from '../entities/Resource';
+import { BiomeGenerator, BiomeData } from '../environment/BiomeGenerator';
 import { Config } from './Config';
 
 export class AutoPilot {
+  private biomeGenerator: BiomeGenerator;
   // Use a Map to store per-cell wander state
   private cellWanderState: Map<string, { cooldown: number; direction: { x: number; y: number } }> = new Map();
   // Target caching: cell ID -> resource ID
   private cellTargets: Map<string, string> = new Map();
   private lastResourceCheck = 0;
+
+  constructor(biomeGenerator: BiomeGenerator) {
+    this.biomeGenerator = biomeGenerator;
+  }
 
   // Get movement direction for auto-pilot
   getMovementDirection(
@@ -96,35 +102,42 @@ export class AutoPilot {
       }
     }
 
-    // Priority 3: If ready to reproduce, find a safe area
+    // Priority 3: If ready to reproduce, find a nutrient-rich, low-hazard biome
     if (player.canReproduce()) {
       if (Config.DEBUG_AUTO_PILOT) {
-        console.log(`[AutoPilot] Cell ${player.id} ready to reproduce, seeking safe area`);
+        console.log(`[AutoPilot] Cell ${player.id} ready to reproduce, seeking nutrient-rich, low-hazard biome`);
       }
       
-      // Look for a resource-rich, safe area (nearby resources indicate better biome)
-      const safeResource = this.findNearestResource(player, resources);
-      if (safeResource) {
-        const distance = this.getDistance(player.position, safeResource.position);
-        // Only slow down if we're close to a resource (implies nutrient-rich area)
-        // For now, we'll assume being near resources means better conditions
-        // In a full implementation, we'd check biome.nutrients > 7 and biome.hazards.length === 0
-        const isNearResource = distance < 150; // Within 150 units of a resource
-        
-        const safeDir = this.getDirectionTo(player.position, safeResource.position);
-        if (isNearResource) {
-          // Slow movement when in good area
-          direction.x = safeDir.x * 0.5;
-          direction.y = safeDir.y * 0.5;
-          if (Config.DEBUG_AUTO_PILOT) {
-            console.log(`[AutoPilot] Cell ${player.id} in good area, slowing for reproduction`);
-          }
-        } else {
-          // Move toward good area
-          direction.x = safeDir.x;
-          direction.y = safeDir.y;
+      // Get current biome
+      const currentBiome = this.biomeGenerator.getBiomeAt(player.position.x, player.position.y);
+      
+      // Check if current biome is suitable for reproduction
+      const isNutrientRich = currentBiome.nutrients > 7;
+      const hasLowHazards = currentBiome.hazards.length === 0;
+      const isSuitableBiome = isNutrientRich && hasLowHazards;
+      
+      if (isSuitableBiome) {
+        // Found suitable biome - slow movement for reproduction
+        direction.x *= 0.5;
+        direction.y *= 0.5;
+        if (Config.DEBUG_AUTO_PILOT) {
+          console.log(`[AutoPilot] Cell ${player.id} in suitable biome (nutrients: ${currentBiome.nutrients}, hazards: ${currentBiome.hazards.length}), slowing for reproduction`);
         }
         return direction;
+      } else {
+        // Find a better biome to move toward
+        const safeResource = this.findNearestResource(player, resources);
+        if (safeResource) {
+          // Move toward resources which often indicate better biome conditions
+          const safeDir = this.getDirectionTo(player.position, safeResource.position);
+          direction.x = safeDir.x;
+          direction.y = safeDir.y;
+          
+          if (Config.DEBUG_AUTO_PILOT) {
+            console.log(`[AutoPilot] Cell ${player.id} moving toward better biome (current nutrients: ${currentBiome.nutrients}, hazards: ${currentBiome.hazards.length})`);
+          }
+          return direction;
+        }
       }
     }
 

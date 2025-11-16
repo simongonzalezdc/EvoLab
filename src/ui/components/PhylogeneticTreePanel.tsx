@@ -39,6 +39,7 @@ export const PhylogeneticTreePanel: React.FC<Props> = ({ phylogeneticTree, speci
     const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
 
     // Convert tree to D3 hierarchy
+    if (phylogeneticTree.length === 0 || !phylogeneticTree[0]) return;
     const root = convertToD3Hierarchy(phylogeneticTree[0]);
 
     // Create tree layout
