@@ -38,6 +38,12 @@ export interface GameSettings {
   musicEnabled: boolean;
   autoSave: boolean;
   autoSaveInterval: number; // minutes
+  // Mutation settings
+  mutationRate: number; // 0-1 (0-100%)
+  mutationMagnitude: number; // 0-1 (0-100%)
+  beneficialBias: number; // 0-1 (0-100%)
+  // Event settings
+  randomEventsEnabled: boolean;
 }
 
 class EvoLabDatabase extends Dexie {
@@ -199,6 +205,12 @@ export class SaveSystem {
       musicEnabled: true, // Enable music by default
       autoSave: true,
       autoSaveInterval: 5,
+      // Mutation settings (defaults match MutationEngine)
+      mutationRate: 0.15, // 15%
+      mutationMagnitude: 0.15, // 15%
+      beneficialBias: 0.1, // 10%
+      // Event settings
+      randomEventsEnabled: true,
     };
   }
 
