@@ -139,12 +139,14 @@ export class MusicManager {
   private bassDrone: Tone.Synth;
   private melodySynth: Tone.Synth;
   private padSynth: Tone.PolySynth;
+  private rhythmSynth: Tone.NoiseSynth;
 
   // Per-synth channels for effects
   private ambientChannel: Tone.Channel;
   private bassChannel: Tone.Channel;
   private melodyChannel: Tone.Channel;
   private padChannel: Tone.Channel;
+  private rhythmChannel: Tone.Channel;
 
   // Effects
   private reverb: Tone.Reverb;
@@ -159,6 +161,7 @@ export class MusicManager {
   private melodyLoop: Tone.Loop | null = null;
   private bassLoop: Tone.Loop | null = null;
   private padLoop: Tone.Loop | null = null;
+  private rhythmLoop: Tone.Loop | null = null;
   private ambientChordSeed = 0;
   private lastMelodyIndex = 0; // Track last melody note for stepwise motion
 
@@ -198,6 +201,7 @@ export class MusicManager {
     this.bassChannel = new Tone.Channel({ volume: -8 }).toDestination();
     this.melodyChannel = new Tone.Channel({ volume: -10 }).toDestination();
     this.padChannel = new Tone.Channel({ volume: -15 }).toDestination();
+    this.rhythmChannel = new Tone.Channel({ volume: -18 }).toDestination();
 
     // Create synths
     this.ambientSynth = new Tone.PolySynth(Tone.Synth, {
@@ -237,6 +241,18 @@ export class MusicManager {
         decay: 2,
         sustain: 0.7,
         release: 4,
+      },
+    });
+
+    this.rhythmSynth = new Tone.NoiseSynth({
+      noise: {
+        type: 'white', // White noise for crisp, typing-like sound
+      },
+      envelope: {
+        attack: 0.001, // Very fast attack for percussive hit
+        decay: 0.05,   // Short decay
+        sustain: 0,    // No sustain - quick hits only
+        release: 0.02, // Very short release
       },
     });
 
@@ -323,8 +339,13 @@ export class MusicManager {
     this.padSynth.connect(this.padChannel);
     this.padChannel.connect(this.reverb);
 
+    // Rhythm -> channel -> filter -> master (dry, percussive)
+    this.rhythmSynth.connect(this.rhythmChannel);
+    this.rhythmChannel.connect(this.filter);
+    this.filter.connect(this.masterVolume);
+
     // Volumes are already set in channel creation
-    // Ambient: -6dB, Bass: -8dB, Melody: -10dB, Pad: -15dB
+    // Ambient: -6dB, Bass: -8dB, Melody: -10dB, Pad: -15dB, Rhythm: -18dB
   }
 
   async initialize(): Promise<void> {
@@ -404,14 +425,22 @@ export class MusicManager {
   private startMusic(): void {
     if (!this.isEnabled) return;
 
-    // Start Transport
-    Tone.Transport.start();
+    // Set Transport BPM for consistent timing across all layers
+    // All loops use relative timing (1m, 4n, etc.) which sync to this BPM
+    Tone.Transport.bpm.value = 80; // Slower, ambient tempo
+
+    // Start Transport at quantized time
+    Tone.Transport.start('+0.1'); // Small delay to ensure all loops are ready
 
     // Create loops based on current state
-    this.createAmbientLoop();
-    this.createBassLoop();
-    this.createMelodyLoop();
-    this.createPadLoop();
+    // QUANTIZATION: All loops use Tone.Loop with time parameter, ensuring
+    // every note is triggered exactly on the Transport timeline.
+    // Loop start times use quantization markers (@1m, @2m, etc.)
+    this.createAmbientLoop();  // Starts at 0 (immediately)
+    this.createBassLoop();     // First note at @1m, loop at @4m
+    this.createMelodyLoop();   // Starts at @2m
+    this.createPadLoop();      // Starts at 0 (immediately)
+    this.createRhythmLoop();   // Starts at 0 (16th note grid)
   }
 
   private stopMusic(): void {
@@ -420,6 +449,7 @@ export class MusicManager {
     this.melodyLoop?.stop();
     this.bassLoop?.stop();
     this.padLoop?.stop();
+    this.rhythmLoop?.stop();
 
     // Release all notes
     this.ambientSynth.releaseAll();
@@ -427,8 +457,14 @@ export class MusicManager {
     this.bassDrone.triggerRelease();
     this.padSynth.releaseAll();
 
+    // Clear all scheduled events from Transport
+    Tone.Transport.cancel();
+
     // Stop transport
     Tone.Transport.stop();
+
+    // Reset transport position for clean restart
+    Tone.Transport.position = 0;
   }
 
   private restartMusic(): void {
@@ -453,6 +489,7 @@ export class MusicManager {
       }
     }, interval);
 
+    // Start quantized to measure boundary
     this.ambientLoop.start(0);
   }
 
@@ -464,10 +501,12 @@ export class MusicManager {
     // Release any existing bass note first
     this.bassDrone.triggerRelease();
 
-    // Start continuous bass drone (triggered once, sustained)
+    // Schedule the initial bass note quantized to the grid
     if (this.isEnabled && bassNote) {
-      // Use triggerAttackRelease with very long duration for sustained drone
-      this.bassDrone.triggerAttack(bassNote);
+      // Schedule at the start of the next measure
+      Tone.Transport.scheduleOnce((time) => {
+        this.bassDrone.triggerAttack(bassNote, time);
+      }, '@1m');
     }
 
     // Create a loop to refresh the bass periodically (every 4 measures)
@@ -477,10 +516,11 @@ export class MusicManager {
 
       // Release and retrigger every 4 measures for freshness
       this.bassDrone.triggerRelease(time);
-      this.bassDrone.triggerAttack(bassNote, time + 0.1);
+      this.bassDrone.triggerAttack(bassNote, time + 0.05); // Small offset to avoid clicks
     }, '4m');
 
-    this.bassLoop.start('4m'); // Start after 4 measures
+    // Start bass loop at measure boundary, after 4 measures
+    this.bassLoop.start('@4m');
   }
 
   private createMelodyLoop(): void {
@@ -510,17 +550,19 @@ export class MusicManager {
           // Ensure melody is in audible range (octave 3+)
           const clampedNote = clampNoteToMinOctave(note, MIN_MELODY_OCTAVE);
 
-          // Varied note durations
+          // Varied note durations - all quantized
           const durations: Tone.Unit.Time[] = ['8n', '4n', '4n.'];
           const duration = durations[Math.floor(Math.random() * durations.length)] ?? '4n';
 
+          // Trigger at the exact scheduled time for quantization
           this.melodySynth.triggerAttackRelease(clampedNote, duration, time);
           this.lastMelodyIndex = newIndex;
         }
       }
     }, tempo);
 
-    this.melodyLoop.start(0);
+    // Start melody at measure 2 to let ambient establish first
+    this.melodyLoop.start('@2m');
   }
 
   private createPadLoop(): void {
@@ -530,23 +572,69 @@ export class MusicManager {
     this.padLoop = new Tone.Loop((time: number) => {
       if (!this.isEnabled) return;
 
-      // Pad plays very slow, sustained chords for atmosphere
-      // Build a full 3-note chord for rich texture
-      if (notes.length >= 3) {
-        const chord = [
-          notes[0],
-          notes[2],
-          notes[4 % notes.length]
-        ].filter((n): n is string => n !== undefined);
+      // Pad plays very slow, sustained power chords for atmosphere
+      // Power chord: root + fifth (2 notes only for clarity)
+      if (notes.length >= 2) {
+        const root = notes[0];
+        const fifth = notes[Math.min(4, notes.length - 1)]; // Fifth, or closest available
 
-        if (chord.length > 0) {
-          // Very long sustained notes (2 measures)
-          this.padSynth.triggerAttackRelease(chord, '2m', time);
+        const chord = [root, fifth].filter((n): n is string => n !== undefined && n !== root || n === root);
+
+        // Ensure we have exactly 2 distinct notes
+        const uniqueChord = Array.from(new Set(chord));
+        if (uniqueChord.length >= 1) {
+          // Pad with root if only 1 note available
+          const finalChord = uniqueChord.length === 1 ? [uniqueChord[0]!, uniqueChord[0]!] : uniqueChord.slice(0, 2);
+
+          // Very long sustained notes (2 measures) - triggered at exact scheduled time
+          this.padSynth.triggerAttackRelease(finalChord, '2m', time);
         }
       }
     }, '2m'); // Every 2 measures
 
+    // Start pad immediately, quantized to transport grid
     this.padLoop.start(0);
+  }
+
+  private createRhythmLoop(): void {
+    this.rhythmLoop?.stop();
+
+    // Track beat position for pattern-based triggering
+    let beatCount = 0;
+
+    this.rhythmLoop = new Tone.Loop((time: number) => {
+      if (!this.isEnabled) return;
+
+      // Create a microbeat pattern - typing/shuffling card sound
+      // Beat position determines probability (emphasize downbeats)
+      const beatInMeasure = beatCount % 16; // 16 sixteenth notes per measure (4/4)
+
+      // Downbeats (1, 5, 9, 13) have higher probability
+      const isDownbeat = beatInMeasure % 4 === 0;
+      const isOffbeat = beatInMeasure % 2 === 1;
+
+      // Base activity increases with combat intensity
+      let activity = 0.2; // Base 20%
+
+      if (isDownbeat) {
+        activity = 0.5 + (this.currentState.combatIntensity * 0.3); // 50-80% on downbeats
+      } else if (isOffbeat) {
+        activity = 0.15 + (this.currentState.combatIntensity * 0.25); // 15-40% on offbeats
+      } else {
+        activity = 0.1 + (this.currentState.combatIntensity * 0.2); // 10-30% elsewhere
+      }
+
+      // Trigger based on probability, but always quantized to the grid
+      if (Math.random() < activity) {
+        // Very short noise burst for typing/shuffling sound, triggered at exact time
+        this.rhythmSynth.triggerAttackRelease('32n', time);
+      }
+
+      beatCount++;
+    }, '16n'); // 16th note grid for microbeat feel
+
+    // Start rhythm quantized to beat 1
+    this.rhythmLoop.start(0);
   }
 
   private updateMusicParameters(): void {
@@ -634,15 +722,15 @@ export class MusicManager {
 
     const rootIndex = rootOffset % uniqueNotes.length;
 
-    // Build a proper triad: root, third (2 scale degrees up), fifth (4 scale degrees up)
+    // Build a power chord: root + fifth (2 notes only)
+    // Power chords are more stable and less muddy than triads
     const chord: string[] = [];
 
-    // Only use 2 notes for less density
     const root = uniqueNotes[rootIndex];
-    const third = uniqueNotes[(rootIndex + 2) % uniqueNotes.length];
+    const fifth = uniqueNotes[(rootIndex + 4) % uniqueNotes.length]; // Fifth is 4 scale degrees up
 
     if (root) chord.push(root);
-    if (third && third !== root) chord.push(third);
+    if (fifth && fifth !== root) chord.push(fifth);
 
     return chord;
   }
@@ -678,14 +766,14 @@ export class MusicManager {
     Tone.Transport.bpm.rampTo(bpm, 0.5);
   }
 
-  setLayerMute(layer: 'ambient' | 'bass' | 'melody' | 'pad', muted: boolean): void {
+  setLayerMute(layer: 'ambient' | 'bass' | 'melody' | 'pad' | 'rhythm', muted: boolean): void {
     const channel = this.getChannelForLayer(layer);
     if (channel) {
       channel.volume.rampTo(muted ? -Infinity : 0, 0.1);
     }
   }
 
-  private getChannelForLayer(layer: 'ambient' | 'bass' | 'melody' | 'pad'): Tone.Channel | null {
+  private getChannelForLayer(layer: 'ambient' | 'bass' | 'melody' | 'pad' | 'rhythm'): Tone.Channel | null {
     switch (layer) {
       case 'ambient':
         return this.ambientChannel;
@@ -695,6 +783,8 @@ export class MusicManager {
         return this.melodyChannel;
       case 'pad':
         return this.padChannel;
+      case 'rhythm':
+        return this.rhythmChannel;
       default:
         return null;
     }
@@ -729,10 +819,12 @@ export class MusicManager {
     this.bassDrone.dispose();
     this.melodySynth.dispose();
     this.padSynth.dispose();
+    this.rhythmSynth.dispose();
     this.ambientChannel.dispose();
     this.bassChannel.dispose();
     this.melodyChannel.dispose();
     this.padChannel.dispose();
+    this.rhythmChannel.dispose();
     this.reverb.dispose();
     this.filter.dispose();
     this.delay.dispose();

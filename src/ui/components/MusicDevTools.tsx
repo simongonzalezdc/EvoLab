@@ -19,6 +19,7 @@ export const MusicDevTools: React.FC<MusicDevToolsProps> = ({
   const [muteBass, setMuteBass] = useState(false);
   const [muteMelody, setMuteMelody] = useState(false);
   const [mutePad, setMutePad] = useState(false);
+  const [muteRhythm, setMuteRhythm] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState(0);
 
   useEffect(() => {
@@ -32,6 +33,7 @@ export const MusicDevTools: React.FC<MusicDevToolsProps> = ({
       musicManager.setLayerMute('bass', muteBass);
       musicManager.setLayerMute('melody', muteMelody);
       musicManager.setLayerMute('pad', mutePad);
+      musicManager.setLayerMute('rhythm', muteRhythm);
     }
   }, []);
 
@@ -240,6 +242,17 @@ export const MusicDevTools: React.FC<MusicDevToolsProps> = ({
               }}
             />
             <span>Pad</span>
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <input
+              type="checkbox"
+              checked={muteRhythm}
+              onChange={(e) => {
+                setMuteRhythm(e.target.checked);
+                musicManager?.setLayerMute('rhythm', e.target.checked);
+              }}
+            />
+            <span>Rhythm</span>
           </label>
         </div>
       </div>
