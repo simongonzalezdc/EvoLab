@@ -530,18 +530,22 @@ export class MusicManager {
     this.padLoop = new Tone.Loop((time: number) => {
       if (!this.isEnabled) return;
 
-      // Pad plays very slow, sustained chords for atmosphere
-      // Build a full 3-note chord for rich texture
-      if (notes.length >= 3) {
-        const chord = [
-          notes[0],
-          notes[2],
-          notes[4 % notes.length]
-        ].filter((n): n is string => n !== undefined);
+      // Pad plays very slow, sustained power chords for atmosphere
+      // Power chord: root + fifth (2 notes only for clarity)
+      if (notes.length >= 2) {
+        const root = notes[0];
+        const fifth = notes[Math.min(4, notes.length - 1)]; // Fifth, or closest available
 
-        if (chord.length > 0) {
+        const chord = [root, fifth].filter((n): n is string => n !== undefined && n !== root || n === root);
+
+        // Ensure we have exactly 2 distinct notes
+        const uniqueChord = Array.from(new Set(chord));
+        if (uniqueChord.length >= 1) {
+          // Pad with root if only 1 note available
+          const finalChord = uniqueChord.length === 1 ? [uniqueChord[0]!, uniqueChord[0]!] : uniqueChord.slice(0, 2);
+
           // Very long sustained notes (2 measures)
-          this.padSynth.triggerAttackRelease(chord, '2m', time);
+          this.padSynth.triggerAttackRelease(finalChord, '2m', time);
         }
       }
     }, '2m'); // Every 2 measures
@@ -634,15 +638,15 @@ export class MusicManager {
 
     const rootIndex = rootOffset % uniqueNotes.length;
 
-    // Build a proper triad: root, third (2 scale degrees up), fifth (4 scale degrees up)
+    // Build a power chord: root + fifth (2 notes only)
+    // Power chords are more stable and less muddy than triads
     const chord: string[] = [];
 
-    // Only use 2 notes for less density
     const root = uniqueNotes[rootIndex];
-    const third = uniqueNotes[(rootIndex + 2) % uniqueNotes.length];
+    const fifth = uniqueNotes[(rootIndex + 4) % uniqueNotes.length]; // Fifth is 4 scale degrees up
 
     if (root) chord.push(root);
-    if (third && third !== root) chord.push(third);
+    if (fifth && fifth !== root) chord.push(fifth);
 
     return chord;
   }
