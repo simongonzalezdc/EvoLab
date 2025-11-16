@@ -83,7 +83,48 @@ export class PixiApp {
     console.log(`[PixiApp] initialize: WorldContainer visible: ${this.worldContainer.visible}, alpha: ${this.worldContainer.alpha}`);
     console.log(`[PixiApp] initialize: Canvas size: ${width}x${height}`);
 
+    // Add map boundary visualization
+    this.createMapBoundary();
+
     this.isInitialized = true;
+  }
+
+  // Create visual boundary for the map
+  private createMapBoundary(): void {
+    const halfWidth = Config.LAKE_WIDTH / 2;
+    const halfHeight = Config.LAKE_HEIGHT / 2;
+
+    this.mapBoundary = new Graphics();
+
+    // Draw boundary rectangle with semi-transparent border
+    this.mapBoundary.rect(-halfWidth, -halfHeight, Config.LAKE_WIDTH, Config.LAKE_HEIGHT);
+    this.mapBoundary.stroke({
+      width: 4,
+      color: 0x4CAF50,
+      alpha: 0.5
+    });
+
+    // Add subtle gradient fade at edges to indicate boundary
+    const fadeWidth = 100;
+
+    // Left edge fade
+    this.mapBoundary.rect(-halfWidth, -halfHeight, fadeWidth, Config.LAKE_HEIGHT);
+    this.mapBoundary.fill({ color: 0x0a0e27, alpha: 0.3 });
+
+    // Right edge fade
+    this.mapBoundary.rect(halfWidth - fadeWidth, -halfHeight, fadeWidth, Config.LAKE_HEIGHT);
+    this.mapBoundary.fill({ color: 0x0a0e27, alpha: 0.3 });
+
+    // Top edge fade
+    this.mapBoundary.rect(-halfWidth, -halfHeight, Config.LAKE_WIDTH, fadeWidth);
+    this.mapBoundary.fill({ color: 0x0a0e27, alpha: 0.3 });
+
+    // Bottom edge fade
+    this.mapBoundary.rect(-halfWidth, halfHeight - fadeWidth, Config.LAKE_WIDTH, fadeWidth);
+    this.mapBoundary.fill({ color: 0x0a0e27, alpha: 0.3 });
+
+    // Add to world container (above biomes but below entities)
+    this.worldContainer.addChild(this.mapBoundary);
   }
 
   // Add biome layer underneath entities
