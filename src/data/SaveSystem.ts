@@ -196,7 +196,7 @@ export class SaveSystem {
       showGrid: false,
       showStats: true,
       soundEnabled: false,
-      musicEnabled: false,
+      musicEnabled: true, // Enable music by default
       autoSave: true,
       autoSaveInterval: 5,
     };

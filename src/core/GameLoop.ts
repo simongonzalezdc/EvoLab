@@ -19,6 +19,8 @@ import { MusicManager } from '../audio/MusicManager';
 import { AchievementSystem } from '../achievements/AchievementSystem';
 import type { Achievement } from '../achievements/AchievementSystem';
 import { EvolutionSystemsManager } from './EvolutionSystemsManager';
+import { AutoPilot } from './AutoPilot';
+import { Cell } from '../entities/Cell';
 
 export class GameLoop {
   private renderer: PixiApp;
@@ -46,6 +48,8 @@ export class GameLoop {
   private carnivoreKills = 0;
   private visitedBiomes: Set<string> = new Set();
   private totalGlucoseCollected = 0;
+  private autoPilot: AutoPilot;
+  private autoMode = false; // Auto-pilot mode (cell manages itself)
 
   constructor() {
     this.renderer = new PixiApp();
@@ -68,6 +72,7 @@ export class GameLoop {
       enableSpeciation: false, // Start disabled
     });
     this.currentSettings = this.saveSystem.getDefaultSettings();
+    this.autoPilot = new AutoPilot();
 
     // Initialize base species for speciation system
     const baseGenome = Genome.createDefault();
@@ -87,12 +92,31 @@ export class GameLoop {
 
   private setupUICallbacks(): void {
     this.uiController.onApply((modifications) => {
-      this.pendingModifications = modifications;
+      // Apply evolution modifications to species
+      if (this.entityManager.playerSpecies) {
+        // Apply evolution (even if modifications are empty, generation still advances)
+        this.entityManager.playerSpecies.applyEvolution(modifications);
+        // Close trait editor after applying
+        this.uiController.hideTraitEditor();
+      } else if (this.entityManager.playerCell) {
+        // Legacy single-cell mode
+        this.pendingModifications = modifications;
+      }
     });
 
     this.uiController.onReportContinue(() => {
-      // Show trait editor after generation report
-      if (this.entityManager.playerCell) {
+      // Show trait editor after generation report (species-level)
+      if (this.entityManager.playerSpecies) {
+        const stats = this.entityManager.playerSpecies.getStats();
+        const baseGenome = this.entityManager.playerSpecies.getBaseGenome();
+        const avgTraits = stats.averageTraits as Traits;
+        this.uiController.showTraitEditor(
+          avgTraits,
+          stats.generation,
+          baseGenome.dnaPoints
+        );
+      } else if (this.entityManager.playerCell) {
+        // Legacy single-cell mode
         const player = this.entityManager.playerCell;
         this.uiController.showTraitEditor(
           player.traits,
@@ -146,6 +170,24 @@ export class GameLoop {
     this.uiController.setShowPhylogeneticTreeCallback(() => {
       this.showPhylogeneticTree();
     });
+
+    this.uiController.setToggleAutoModeCallback(() => {
+      this.toggleAutoMode();
+    });
+
+    this.uiController.setAutoModeStateCallback(() => {
+      return this.autoMode;
+    });
+  }
+
+  // Toggle auto-pilot mode
+  toggleAutoMode(): void {
+    this.autoMode = !this.autoMode;
+  }
+
+  // Get auto mode state
+  getAutoMode(): boolean {
+    return this.autoMode;
   }
 
   private showPhylogeneticTree(): void {
@@ -179,32 +221,16 @@ export class GameLoop {
     // Add biome layer to renderer (underneath entities)
     this.renderer.addBiomeLayer(this.biomeRenderer.getContainer());
 
-    // Create player cell
-    this.entityManager.createPlayerCell();
+    // Create player species (species-level gameplay)
+    this.entityManager.createPlayerSpecies();
 
-    // Set up death callback for player
-    if (this.entityManager.playerCell) {
-      this.entityManager.playerCell.setDeathCallback((cause) => {
-        const player = this.entityManager.playerCell;
-        if (player) {
-          this.uiController.showDeathScreen(
-            player.genome.lineage.generation,
-            player.survivalTime,
-            this.entityManager.glucoseCollected,
-            cause
-          );
-        }
-      });
-    }
+    // Set up species extinction check (species-level gameplay)
+    // Species extinction will be checked in the update loop
 
-    // Record birth in history tracker
-    if (this.entityManager.playerCell) {
-      this.historyTracker.recordBirth(
-        this.entityManager.playerCell.id,
-        this.entityManager.playerCell.genome,
-        null,
-        true
-      );
+    // Initialize camera to species position immediately
+    if (this.entityManager.playerSpecies) {
+      const speciesCenter = this.entityManager.playerSpecies.getCenterPosition();
+      this.renderer.updateCamera(speciesCenter.x, speciesCenter.y);
     }
 
     // Spawn resources
@@ -262,14 +288,8 @@ export class GameLoop {
     // Update day/night cycle
     this.dayNightCycle.update(deltaTime);
 
-    // Handle player input
-    const player = this.entityManager.playerCell;
-    if (player) {
-      const direction = this.inputHandler.getMovementDirection();
-      if (direction.x !== 0 || direction.y !== 0) {
-        player.applyForce(direction, Config.ACCELERATION);
-      }
-    }
+    // Species-level gameplay: no direct control, species manages itself
+    // Auto-pilot is always enabled for species-level view
 
     // Update achievement tracking
     this.updateAchievements(deltaTime);
@@ -277,25 +297,58 @@ export class GameLoop {
     // Apply environmental hazards
     this.applyEnvironmentalHazards(deltaTime);
 
-    // Update all entities
-    this.entityManager.update(deltaTime);
+    // Update all entities (species-level gameplay)
+    this.entityManager.update(deltaTime, true); // Always use auto-mode for species
 
     // Update evolution systems (physics, mating, speciation)
     const allCells = this.entityManager.getAllCells();
     this.evolutionSystems.update(deltaTime, allCells);
 
-    // Update camera to follow player
-    if (player) {
-      this.renderer.updateCamera(player.position.x, player.position.y);
+    // Update camera to follow species center (species-level view)
+    if (this.entityManager.playerSpecies) {
+      const speciesCenter = this.entityManager.playerSpecies.getCenterPosition();
+      const speciesCells = this.entityManager.playerSpecies.getAllCells();
+      
+      // Only update camera if we have valid coordinates and cells exist
+      if (speciesCells.length > 0 && !isNaN(speciesCenter.x) && !isNaN(speciesCenter.y) && isFinite(speciesCenter.x) && isFinite(speciesCenter.y)) {
+        // Calculate species spread to determine if we should zoom out
+        let maxDistance = 0;
+        speciesCells.forEach(cell => {
+          const dist = Math.sqrt(
+            Math.pow(cell.position.x - speciesCenter.x, 2) +
+            Math.pow(cell.position.y - speciesCenter.y, 2)
+          );
+          if (dist > maxDistance) maxDistance = dist;
+        });
+        
+        // Update camera to species center
+        this.renderer.updateCamera(speciesCenter.x, speciesCenter.y);
 
-      // Update biome rendering around camera
-      this.biomeRenderer.render(
-        player.position.x,
-        player.position.y,
-        Config.CANVAS_WIDTH,
-        Config.CANVAS_HEIGHT
-      );
+        // Update biome rendering around camera (with wider view for species)
+        const canvasWidth = this.renderer.app.canvas.width;
+        const canvasHeight = this.renderer.app.canvas.height;
+        const viewWidth = Math.max(canvasWidth, maxDistance * 2 + 200);
+        const viewHeight = Math.max(canvasHeight, maxDistance * 2 + 200);
+        this.biomeRenderer.render(
+          speciesCenter.x,
+          speciesCenter.y,
+          viewWidth,
+          viewHeight
+        );
+      }
+
+      // Check for species extinction
+      if (this.entityManager.playerSpecies.isExtinct()) {
+        const stats = this.entityManager.playerSpecies.getStats();
+        this.uiController.showDeathScreen(
+          stats.generation,
+          stats.averageSurvivalTime,
+          stats.totalResourcesCollected,
+          'atp' // Species went extinct
+        );
+      }
     }
+    // Note: Always use species-level view - single-cell mode removed
 
     // Update lighting based on day/night
     const lightLevel = this.dayNightCycle.getLightLevel();
@@ -310,8 +363,29 @@ export class GameLoop {
     // Update HUD
     this.updateHUD();
 
-    // Update stats UI
-    if (player) {
+    // Update stats UI (species-level)
+    if (this.entityManager.playerSpecies) {
+      const speciesStats = this.entityManager.playerSpecies.getStats();
+      // Use average traits for display
+      const avgTraits = speciesStats.averageTraits as Traits;
+      this.uiController.updateStats(
+        avgTraits,
+        speciesStats.generation,
+        this.historyTracker.getPopulationData(),
+        this.historyTracker.getLineageTree()
+      );
+
+      // Update evolution control panel
+      this.uiController.updateEvolutionControls(
+        this.evolutionSystems.physicsEnabled,
+        this.evolutionSystems.sexualReproductionEnabled ? 'sexual' : 'asexual',
+        this.evolutionSystems.speciationEnabled,
+        this.evolutionSystems.getSpeciesCount(),
+        this.evolutionSystems.getMatingStats()
+      );
+    } else if (this.entityManager.playerCell) {
+      // Legacy single-cell mode
+      const player = this.entityManager.playerCell;
       this.uiController.updateStats(
         player.traits,
         this.historyTracker.getCurrentGeneration(),
@@ -341,11 +415,22 @@ export class GameLoop {
   }
 
   private updateMusic(): void {
-    const player = this.entityManager.playerCell;
-    if (!player) return;
+    // Get species center or player position for music
+    let position: { x: number; y: number } = { x: Config.PLAYER_START_X, y: Config.PLAYER_START_Y };
+    let generation = 1;
+    
+    if (this.entityManager.playerSpecies) {
+      position = this.entityManager.playerSpecies.getCenterPosition();
+      generation = this.entityManager.playerSpecies.getStats().generation;
+    } else if (this.entityManager.playerCell) {
+      position = this.entityManager.playerCell.position;
+      generation = this.entityManager.playerCell.genome.lineage.generation;
+    } else {
+      return;
+    }
 
-    // Get current biome at player position
-    const biome = this.biomeGenerator.getBiomeAt(player.position.x, player.position.y);
+    // Get current biome at species center position
+    const biome = this.biomeGenerator.getBiomeAt(position.x, position.y);
 
     // Calculate combat intensity based on nearby threats
     const combatIntensity = this.calculateCombatIntensity();
@@ -356,11 +441,35 @@ export class GameLoop {
       timeOfDay: this.dayNightCycle.getTimeOfDay(),
       lightLevel: this.dayNightCycle.getLightLevel(),
       combatIntensity,
-      generation: player.genome.lineage.generation,
+      generation,
     });
   }
 
   private calculateCombatIntensity(): number {
+    // Calculate combat intensity based on nearby threats to species
+    if (this.entityManager.playerSpecies) {
+      const speciesCells = this.entityManager.playerSpecies.getAllCells();
+      if (speciesCells.length === 0) return 0;
+      
+      // Check for nearby predators
+      const allCells = this.entityManager.getAllCells();
+      let threatCount = 0;
+      speciesCells.forEach(cell => {
+        allCells.forEach(otherCell => {
+          if (otherCell.id !== cell.id && !speciesCells.includes(otherCell)) {
+            const distance = Math.sqrt(
+              Math.pow(cell.position.x - otherCell.position.x, 2) +
+              Math.pow(cell.position.y - otherCell.position.y, 2)
+            );
+            if (distance < 100 && otherCell.traits.aggression > 6) {
+              threatCount++;
+            }
+          }
+        });
+      });
+      return Math.min(1, threatCount / speciesCells.length);
+    }
+    
     const player = this.entityManager.playerCell;
     if (!player) return 0;
 
@@ -474,57 +583,70 @@ export class GameLoop {
   }
 
   private applyEnvironmentalHazards(deltaTime: number): void {
-    const player = this.entityManager.playerCell;
-    if (!player) return;
+    // Apply hazards to all cells in player species
+    if (this.entityManager.playerSpecies) {
+      const speciesCells = this.entityManager.playerSpecies.getAllCells();
+      speciesCells.forEach(cell => {
+        const biome = this.biomeGenerator.getBiomeAt(cell.position.x, cell.position.y);
+        this.applyHazardsToCell(cell, biome, deltaTime);
+      });
+    } else if (this.entityManager.playerCell) {
+      // Legacy single-cell mode
+      const player = this.entityManager.playerCell;
+      const biome = this.biomeGenerator.getBiomeAt(player.position.x, player.position.y);
+      this.applyHazardsToCell(player, biome, deltaTime);
+    }
+  }
 
-    const biome = this.biomeGenerator.getBiomeAt(player.position.x, player.position.y);
-
+  private applyHazardsToCell(cell: Cell, biome: any, deltaTime: number): void {
     for (const hazard of biome.hazards) {
       switch (hazard.type) {
-        case 'current':
-          // Apply current force to push player
+        case 'current': {
+          // Apply current force to push cell
           if (hazard.direction) {
             const currentForce = hazard.intensity * 50 * deltaTime;
-            player.applyForce(hazard.direction, currentForce);
+            cell.applyForce(hazard.direction, currentForce);
           }
           break;
+        }
 
-        case 'temperature':
+        case 'temperature': {
           // Extreme temperatures cause damage over time
           // Damage scales with intensity and is reduced by armor
           const tempDamage = hazard.intensity * 2 * deltaTime;
-          const armorReduction = player.traits.armor * 0.1;
+          const armorReduction = cell.traits.armor * 0.1;
           const finalTempDamage = Math.max(0, tempDamage - armorReduction);
-          player.traits.health -= finalTempDamage;
+          cell.traits.health -= finalTempDamage;
           break;
+        }
 
-        case 'oxygen':
+        case 'oxygen': {
           // Low oxygen reduces ATP regeneration
           // Reduces effectiveness of metabolism
           const oxygenPenalty = hazard.intensity * 0.5;
-          const atpDrain = oxygenPenalty * player.traits.metabolismRate * deltaTime;
-          player.traits.atp = Math.max(0, player.traits.atp - atpDrain);
+          const atpDrain = oxygenPenalty * cell.traits.metabolismRate * deltaTime;
+          cell.traits.atp = Math.max(0, cell.traits.atp - atpDrain);
           break;
+        }
 
-        case 'radiation':
+        case 'radiation': {
           // Radiation causes gradual health damage
           const radiationDamage = hazard.intensity * 1.5 * deltaTime;
-          const radiationArmorReduction = player.traits.armor * 0.05;
+          const radiationArmorReduction = cell.traits.armor * 0.05;
           const finalRadDamage = Math.max(0, radiationDamage - radiationArmorReduction);
-          player.traits.health -= finalRadDamage;
+          cell.traits.health -= finalRadDamage;
           break;
+        }
 
-        case 'pressure':
+        case 'pressure': {
           // High pressure slows movement and causes damage
-          // Speed penalty (applied as reduced effectiveness)
-          const pressurePenalty = hazard.intensity * 0.3;
-
           // Pressure damage (armor helps significantly)
           const pressureDamage = hazard.intensity * 1 * deltaTime;
-          const pressureArmorReduction = player.traits.armor * 0.15;
+          const pressureArmorReduction = cell.traits.armor * 0.15;
           const finalPressureDamage = Math.max(0, pressureDamage - pressureArmorReduction);
-          player.traits.health -= finalPressureDamage;
+          cell.traits.health -= finalPressureDamage;
           break;
+        }
       }
     }
   }
@@ -537,6 +659,68 @@ export class GameLoop {
 
   // Update HUD elements
   private updateHUD(): void {
+    // Species-level HUD
+    if (this.entityManager.playerSpecies) {
+      const stats = this.entityManager.playerSpecies.getStats();
+      const avgTraits = stats.averageTraits as Traits;
+      
+      // Update ATP (average)
+      const atpValue = document.getElementById('atp-value');
+      if (atpValue) {
+        atpValue.textContent = Math.floor(avgTraits.atp || 0).toString();
+      }
+
+      // Update Health (average)
+      const healthValue = document.getElementById('health-value');
+      if (healthValue) {
+        healthValue.textContent = Math.floor(avgTraits.health || 0).toString();
+      }
+
+      // Update Generation
+      const generationValue = document.getElementById('generation-value');
+      if (generationValue) {
+        generationValue.textContent = stats.generation.toString();
+      }
+
+      // Update DNA Points
+      const dnaValue = document.getElementById('dna-value');
+      if (dnaValue) {
+        const baseGenome = this.entityManager.playerSpecies.getBaseGenome();
+        dnaValue.textContent = Math.floor(baseGenome.dnaPoints).toString();
+      }
+
+      // Update Population (species size)
+      const populationValue = document.getElementById('population-value');
+      if (populationValue) {
+        populationValue.textContent = stats.population.toString();
+      }
+
+      // Update Time of Day
+      const timeValue = document.getElementById('time-value');
+      if (timeValue) {
+        const time = this.dayNightCycle.getTime();
+        const hours = Math.floor(time);
+        const minutes = Math.floor((time % 1) * 60);
+        timeValue.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      }
+
+      // Evolution button - show when species is ready (based on average survival time)
+      const reproduceBtn = document.getElementById('reproduce-btn') as HTMLButtonElement;
+      if (reproduceBtn) {
+        // Show evolution button periodically (every 30 seconds of average survival)
+        const canEvolve = stats.averageSurvivalTime > 30 && stats.population > 0;
+        reproduceBtn.style.display = canEvolve ? 'block' : 'none';
+        reproduceBtn.textContent = '🧬 Evolve Species';
+
+        // Add click handler if not already added
+        if (canEvolve && !reproduceBtn.onclick) {
+          reproduceBtn.onclick = () => this.handleReproduction();
+        }
+      }
+      return;
+    }
+
+    // Legacy single-cell HUD
     const player = this.entityManager.playerCell;
     if (!player) return;
 
@@ -616,31 +800,55 @@ export class GameLoop {
     }
   }
 
-  // Handle reproduction trigger
+  // Handle reproduction trigger (species-level evolution)
   private handleReproduction(): void {
-    const player = this.entityManager.playerCell;
-    if (!player || !player.canReproduce()) return;
+    if (this.entityManager.playerSpecies) {
+      // Species-level evolution
+      const stats = this.entityManager.playerSpecies.getStats();
+      const baseGenome = this.entityManager.playerSpecies.getBaseGenome();
+      
+      // Calculate DNA points from species performance
+      const dnaPoints = stats.averageSurvivalTime * Config.DNA_FROM_SURVIVAL_TIME + 
+                         stats.totalResourcesCollected * Config.DNA_FROM_GLUCOSE;
+      baseGenome.dnaPoints += dnaPoints;
 
-    // Calculate DNA points
-    const dnaPoints = player.survivalTime * Config.DNA_FROM_SURVIVAL_TIME + this.entityManager.glucoseCollected * Config.DNA_FROM_GLUCOSE;
-    player.genome.dnaPoints += dnaPoints;
+      // Show generation report
+      // Evolution will be applied when user clicks "Apply" in trait editor
+      this.uiController.showGenerationReport({
+        generation: stats.generation + 1,
+        survivalTime: stats.averageSurvivalTime,
+        resourcesCollected: stats.totalResourcesCollected,
+        mutations: baseGenome.lineage.mutations,
+        dnaPointsEarned: dnaPoints,
+      });
 
-    // Show generation report
-    this.uiController.showGenerationReport({
-      generation: player.genome.lineage.generation + 1,
-      survivalTime: player.survivalTime,
-      resourcesCollected: this.entityManager.glucoseCollected,
-      mutations: player.genome.lineage.mutations,
-      dnaPointsEarned: dnaPoints,
-    });
+      // Evolution is applied via onApply callback when user clicks "Apply" in trait editor
+    } else if (this.entityManager.playerCell) {
+      // Legacy single-cell mode
+      const player = this.entityManager.playerCell;
+      if (!player || !player.canReproduce()) return;
 
-    // Wait for user to continue, then reproduction happens in the callback
-    if (this.pendingModifications) {
-      this.entityManager.reproducePlayer(this.pendingModifications);
-      this.pendingModifications = null;
-    } else {
-      // Auto-reproduce with no modifications
-      this.entityManager.reproducePlayer();
+      // Calculate DNA points
+      const dnaPoints = player.survivalTime * Config.DNA_FROM_SURVIVAL_TIME + this.entityManager.glucoseCollected * Config.DNA_FROM_GLUCOSE;
+      player.genome.dnaPoints += dnaPoints;
+
+      // Show generation report
+      this.uiController.showGenerationReport({
+        generation: player.genome.lineage.generation + 1,
+        survivalTime: player.survivalTime,
+        resourcesCollected: this.entityManager.glucoseCollected,
+        mutations: player.genome.lineage.mutations,
+        dnaPointsEarned: dnaPoints,
+      });
+
+      // Wait for user to continue, then reproduction happens in the callback
+      if (this.pendingModifications) {
+        this.entityManager.reproducePlayer(this.pendingModifications);
+        this.pendingModifications = null;
+      } else {
+        // Auto-reproduce with no modifications
+        this.entityManager.reproducePlayer();
+      }
     }
   }
 
@@ -661,34 +869,15 @@ export class GameLoop {
     this.timeControl.reset();
     this.dayNightCycle = new DayNightCycle(Config.DAY_NIGHT_START_TIME, Config.DAY_NIGHT_SPEED_MULTIPLIER);
     this.entityManager = new EntityManager(this.renderer);
-    this.entityManager.createPlayerCell();
+    this.entityManager.createPlayerSpecies(); // Species-level gameplay
 
-    // Set up death callback for new player
-    if (this.entityManager.playerCell) {
-      this.entityManager.playerCell.setDeathCallback((cause) => {
-        const player = this.entityManager.playerCell;
-        if (player) {
-          this.uiController.showDeathScreen(
-            player.genome.lineage.generation,
-            player.survivalTime,
-            this.entityManager.glucoseCollected,
-            cause
-          );
-        }
-      });
+    // Initialize camera to species position
+    if (this.entityManager.playerSpecies) {
+      const speciesCenter = this.entityManager.playerSpecies.getCenterPosition();
+      this.renderer.updateCamera(speciesCenter.x, speciesCenter.y);
     }
 
     this.entityManager.spawnResources();
-
-    // Record new player birth
-    if (this.entityManager.playerCell) {
-      this.historyTracker.recordBirth(
-        this.entityManager.playerCell.id,
-        this.entityManager.playerCell.genome,
-        null,
-        true
-      );
-    }
 
     this.start();
   }
@@ -698,7 +887,7 @@ export class GameLoop {
     try {
       this.stop();
 
-      // Restore player
+      // Restore player species
       const playerGenome = Genome.createDefault();
       playerGenome.traits = sim.playerData.genome.traits;
       playerGenome.lineage = sim.playerData.genome.lineage;
@@ -706,26 +895,12 @@ export class GameLoop {
 
       this.entityManager.dispose();
       this.entityManager = new EntityManager(this.renderer);
-      this.entityManager.createPlayerCell();
-
-      if (this.entityManager.playerCell) {
-        this.entityManager.playerCell.genome = playerGenome;
-        this.entityManager.playerCell.traits = playerGenome.traits;
-        this.entityManager.playerCell.position = sim.playerData.position;
-        this.entityManager.playerCell.traits.atp = sim.playerData.atp;
-
-        // Set up death callback
-        this.entityManager.playerCell.setDeathCallback((cause) => {
-          const player = this.entityManager.playerCell;
-          if (player) {
-            this.uiController.showDeathScreen(
-              player.genome.lineage.generation,
-              player.survivalTime,
-              this.entityManager.glucoseCollected,
-              cause
-            );
-          }
-        });
+      this.entityManager.createPlayerSpecies(playerGenome); // Species-level gameplay
+      
+      // Initialize camera to species position
+      if (this.entityManager.playerSpecies) {
+        const speciesCenter = this.entityManager.playerSpecies.getCenterPosition();
+        this.renderer.updateCamera(speciesCenter.x, speciesCenter.y);
       }
 
       // Restore history
@@ -756,9 +931,18 @@ export class GameLoop {
       if (savedSettings) {
         this.currentSettings = savedSettings;
         this.applySettings(savedSettings);
+      } else {
+        // Apply default settings if none are saved
+        const defaultSettings = this.saveSystem.getDefaultSettings();
+        this.currentSettings = defaultSettings;
+        this.applySettings(defaultSettings);
       }
     } catch (error) {
       console.error('Failed to load settings:', error);
+      // Apply defaults on error
+      const defaultSettings = this.saveSystem.getDefaultSettings();
+      this.currentSettings = defaultSettings;
+      this.applySettings(defaultSettings);
     }
   }
 

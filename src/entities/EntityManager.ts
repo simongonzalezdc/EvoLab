@@ -9,13 +9,15 @@ import { ReproductionSystem } from '../genetics/ReproductionSystem';
 import { TraitSystem } from '../genetics/TraitSystem';
 import { PopulationManager } from '../ai/PopulationManager';
 import { CombatSystem } from './CombatSystem';
+import { PlayerSpeciesManager } from '../core/PlayerSpeciesManager';
 import type { Traits } from '../types/entities';
 
 export class EntityManager {
   private cells: Map<string, Cell> = new Map();
   private resources: Map<string, Resource> = new Map();
   private renderer: PixiApp;
-  public playerCell: Cell | null = null;
+  public playerCell: Cell | null = null; // Keep for backward compatibility, but deprecated
+  public playerSpecies: PlayerSpeciesManager | null = null;
   public glucoseCollected = 0;
   public reproductionSystem: ReproductionSystem;
   public populationManager: PopulationManager;
@@ -31,7 +33,15 @@ export class EntityManager {
     this.populationManager.initializeDefaultSpecies();
   }
 
-  // Create player cell from genome
+  // Create player species from genome
+  createPlayerSpecies(genome?: Genome): PlayerSpeciesManager {
+    const playerGenome = genome || Genome.createDefault();
+    this.playerSpecies = new PlayerSpeciesManager(this.renderer, playerGenome);
+    this.playerSpecies.initialize();
+    return this.playerSpecies;
+  }
+
+  // Create player cell from genome (deprecated - kept for compatibility)
   createPlayerCell(genome?: Genome): Cell {
     const playerGenome = genome || Genome.createDefault();
 
@@ -77,8 +87,15 @@ export class EntityManager {
   }
 
   // Update all entities
-  update(deltaTime: number): void {
-    // Update player cell
+  update(deltaTime: number, autoMode: boolean = false): void {
+    // Update player species (new species-level gameplay)
+    if (this.playerSpecies) {
+      const allCells = this.getAllCells();
+      const allResources = Array.from(this.resources.values());
+      this.playerSpecies.update(deltaTime, allCells, allResources, autoMode);
+    }
+
+    // Update legacy player cell (for backward compatibility)
     if (this.playerCell) {
       this.playerCell.update(deltaTime);
       this.checkResourceCollection(this.playerCell);
@@ -161,11 +178,12 @@ export class EntityManager {
     return newCell;
   }
 
-  // Get all cells (player + AI)
+  // Get all cells (player species + AI)
   getAllCells(): Cell[] {
     const playerCells = Array.from(this.cells.values());
+    const playerSpeciesCells = this.playerSpecies ? this.playerSpecies.getAllCells() : [];
     const aiCells = this.populationManager.getAllCells();
-    return [...playerCells, ...aiCells];
+    return [...playerCells, ...playerSpeciesCells, ...aiCells];
   }
 
   // Get all cells
@@ -181,13 +199,18 @@ export class EntityManager {
   // Get population stats
   getPopulationStats(): { [key: string]: number } {
     const stats = this.populationManager.getStats();
-    stats['Player'] = this.playerCell ? 1 : 0;
+    if (this.playerSpecies) {
+      stats['Your Species'] = this.playerSpecies.getStats().population;
+    } else {
+      stats['Player'] = this.playerCell ? 1 : 0;
+    }
     return stats;
   }
 
   dispose(): void {
     this.cells.forEach(cell => cell.dispose());
     this.resources.forEach(resource => resource.dispose());
+    this.playerSpecies?.dispose();
     this.populationManager.dispose();
     this.cells.clear();
     this.resources.clear();

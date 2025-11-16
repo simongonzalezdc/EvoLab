@@ -1,9 +1,9 @@
 // Game configuration constants
 
 export const Config = {
-  // Canvas settings
-  CANVAS_WIDTH: 1200,
-  CANVAS_HEIGHT: 800,
+  // Canvas settings - will be set to viewport size
+  CANVAS_WIDTH: typeof window !== 'undefined' ? window.innerWidth : 1200,
+  CANVAS_HEIGHT: typeof window !== 'undefined' ? window.innerHeight : 800,
   BACKGROUND_COLOR: 0x0a0e27,
 
   // Player cell settings
@@ -14,23 +14,23 @@ export const Config = {
 
   // Movement settings
   MOVE_SPEED: 3,
-  ACCELERATION: 0.5,
-  FRICTION: 0.95,
-  MAX_VELOCITY: 5,
+  ACCELERATION: 2.0, // Increased from 0.5 for more responsive movement
+  FRICTION: 0.88, // Reduced from 0.95 for less sluggish feel
+  MAX_VELOCITY: 8, // Increased from 5 for faster movement
 
   // ATP / Energy settings
   START_ATP: 100,
   MAX_ATP: 100,
-  ATP_DRAIN_RATE: 0.05, // ATP drained per frame at 60 FPS
-  ATP_DRAIN_MULTIPLIER_SIZE: 0.01, // Extra drain per size unit
-  ATP_FROM_GLUCOSE: 25, // ATP restored when collecting glucose
+  ATP_DRAIN_RATE: 0.025, // Reduced from 0.05 - cells last twice as long
+  ATP_DRAIN_MULTIPLIER_SIZE: 0.005, // Reduced from 0.01 - size penalty halved
+  ATP_FROM_GLUCOSE: 40, // Increased from 25 - more rewarding to collect glucose
 
   // Resource settings
-  GLUCOSE_COUNT: 30,
+  GLUCOSE_COUNT: 40, // Increased from 30 - more resources available
   GLUCOSE_RADIUS: 8,
   GLUCOSE_COLOR: 0xffd700,
-  GLUCOSE_RESPAWN_TIME: 10000, // milliseconds
-  RESOURCE_COLLECTION_RANGE: 25, // Distance to auto-collect
+  GLUCOSE_RESPAWN_TIME: 8000, // Reduced from 10000 - faster respawn
+  RESOURCE_COLLECTION_RANGE: 30, // Increased from 25 - easier to collect
 
   // Lake environment settings
   LAKE_WIDTH: 2000,

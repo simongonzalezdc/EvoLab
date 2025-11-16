@@ -8,6 +8,8 @@ interface MainMenuProps {
   onExportHistory: () => void;
   onToggleStats: () => void;
   onAchievements: () => void;
+  onToggleAutoMode: () => void;
+  autoMode: boolean;
   showStats: boolean;
 }
 
@@ -19,6 +21,8 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onExportHistory,
   onToggleStats,
   onAchievements,
+  onToggleAutoMode,
+  autoMode,
   showStats,
 }) => {
   return (
@@ -32,6 +36,24 @@ export const MainMenu: React.FC<MainMenuProps> = ({
     >
       {/* Menu Toggle Button */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'flex-end' }}>
+        {/* Auto Mode Toggle */}
+        <button
+          onClick={onToggleAutoMode}
+          style={{
+            padding: '10px 15px',
+            background: autoMode ? '#10b981' : '#333',
+            color: autoMode ? '#000' : '#fff',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            fontSize: '14px',
+            minWidth: '150px',
+          }}
+        >
+          {autoMode ? '🤖 Auto Mode ON' : '🎮 Manual Mode'}
+        </button>
+
         {/* Stats Toggle */}
         <button
           onClick={onToggleStats}

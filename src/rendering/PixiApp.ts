@@ -19,13 +19,18 @@ export class PixiApp {
       return;
     }
 
+    // Use full viewport size
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
     await this.app.init({
-      width: Config.CANVAS_WIDTH,
-      height: Config.CANVAS_HEIGHT,
+      width,
+      height,
       backgroundColor: Config.BACKGROUND_COLOR,
       resolution: window.devicePixelRatio || 1,
       autoDensity: true,
       antialias: true,
+      resizeTo: window, // Auto-resize with window
     });
 
     // Add canvas to DOM
@@ -34,12 +39,17 @@ export class PixiApp {
       appElement.appendChild(this.app.canvas);
     }
 
+    // Make canvas fill the viewport
+    this.app.canvas.style.width = '100%';
+    this.app.canvas.style.height = '100%';
+    this.app.canvas.style.display = 'block';
+
     // Add world container to stage
     this.app.stage.addChild(this.worldContainer);
 
-    // Center world container (for camera)
-    this.worldContainer.x = Config.CANVAS_WIDTH / 2;
-    this.worldContainer.y = Config.CANVAS_HEIGHT / 2;
+    // Center world container (for camera) - will be updated by camera
+    this.worldContainer.x = width / 2;
+    this.worldContainer.y = height / 2;
 
     this.isInitialized = true;
   }
@@ -52,9 +62,11 @@ export class PixiApp {
 
   // Update camera to follow target position
   updateCamera(targetX: number, targetY: number): void {
-    // Camera follows player
-    this.worldContainer.x = Config.CANVAS_WIDTH / 2 - targetX;
-    this.worldContainer.y = Config.CANVAS_HEIGHT / 2 - targetY;
+    // Camera follows player - use actual canvas size
+    const width = this.app.canvas.width;
+    const height = this.app.canvas.height;
+    this.worldContainer.x = width / 2 - targetX;
+    this.worldContainer.y = height / 2 - targetY;
   }
 
   // Create a circular sprite (for cells)

@@ -78,6 +78,8 @@ export class UIController {
   private onToggleReproductionMode: (() => void) | null = null;
   private onToggleSpeciation: (() => void) | null = null;
   private onShowPhylogeneticTree: (() => void) | null = null;
+  private onToggleAutoMode: (() => void) | null = null;
+  private getAutoModeState: (() => boolean) | null = null;
   private timeControl: TimeControl;
   private saveSystem: SaveSystem;
 
@@ -143,9 +145,6 @@ export class UIController {
         this.onApplyModifications?.(mods);
       };
 
-      const handleCancel = () => {
-        setState(s => ({ ...s, showTraitEditor: false }));
-      };
 
       const handleContinue = () => {
         setState(s => ({ ...s, showGenerationReport: false }));
@@ -221,6 +220,12 @@ export class UIController {
             onExportHistory={handleExportHistory}
             onToggleStats={() => setState(s => ({ ...s, showStats: !s.showStats }))}
             onAchievements={handleShowAchievements}
+            onToggleAutoMode={() => {
+              this.onToggleAutoMode?.();
+              // Force re-render to update button state
+              setState(s => ({ ...s }));
+            }}
+            autoMode={this.getAutoModeState?.() || false}
             showStats={state.showStats}
           />
 
@@ -237,7 +242,7 @@ export class UIController {
             onToggleSpeciation={handleToggleSpeciation}
             onShowPhylogeneticTree={handleShowPhylogeneticTree}
             speciesCount={state.speciesCount}
-            matingStats={state.matingStats}
+            matingStats={state.matingStats || undefined}
           />
 
           {/* Stats Panel */}
@@ -269,7 +274,6 @@ export class UIController {
               availableDNA={state.availableDNA}
               generation={state.generation}
               onApply={handleApplyModifications}
-              onCancel={handleCancel}
             />
           )}
 
@@ -364,6 +368,13 @@ export class UIController {
       currentTraits: traits,
       generation,
       availableDNA,
+    }));
+  }
+
+  hideTraitEditor() {
+    this.setState?.(s => ({
+      ...s,
+      showTraitEditor: false,
     }));
   }
 
@@ -464,6 +475,14 @@ export class UIController {
 
   setShowPhylogeneticTreeCallback(callback: () => void) {
     this.onShowPhylogeneticTree = callback;
+  }
+
+  setToggleAutoModeCallback(callback: () => void) {
+    this.onToggleAutoMode = callback;
+  }
+
+  setAutoModeStateCallback(callback: () => boolean) {
+    this.getAutoModeState = callback;
   }
 
   updateEvolutionControls(

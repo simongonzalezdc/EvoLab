@@ -10,7 +10,6 @@ interface TraitEditorProps {
   availableDNA: number;
   generation: number;
   onApply: (modifications: Partial<Traits>) => void;
-  onCancel: () => void;
 }
 
 export const TraitEditor: React.FC<TraitEditorProps> = ({
@@ -18,7 +17,6 @@ export const TraitEditor: React.FC<TraitEditorProps> = ({
   availableDNA,
   generation,
   onApply,
-  onCancel,
 }) => {
   const [modifications, setModifications] = useState<Partial<Traits>>({});
   const [dnaSpent, setDNASpent] = useState(0);
@@ -59,6 +57,11 @@ export const TraitEditor: React.FC<TraitEditorProps> = ({
 
   const handleApply = () => {
     onApply(modifications);
+  };
+
+  const handleCancel = () => {
+    // Apply with no modifications to continue the game
+    onApply({});
   };
 
   const handleReset = () => {
@@ -166,11 +169,11 @@ export const TraitEditor: React.FC<TraitEditorProps> = ({
             <button onClick={handleReset} className="btn btn-secondary">
               Reset Changes
             </button>
-            <button onClick={onCancel} className="btn btn-secondary">
-              Cancel
+            <button onClick={handleCancel} className="btn btn-secondary">
+              Skip (No Changes)
             </button>
-            <button onClick={handleApply} className="btn btn-primary" disabled={dnaSpent === 0}>
-              Apply Modifications
+            <button onClick={handleApply} className="btn btn-primary">
+              {Object.keys(modifications).length === 0 ? 'Continue (No Changes)' : 'Apply Modifications'}
             </button>
           </div>
           <div className="info-text">
