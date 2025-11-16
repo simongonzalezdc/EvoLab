@@ -39,9 +39,12 @@ export class AutoPilot {
     // Priority 2: Seek resources if ATP is low or compounds are needed
     // Improved hunger detection using ATP ratio and projected ATP
     const atpRatio = player.traits.atp / player.traits.maxATP;
-    
+
     // Calculate projected ATP (current - drain rate * starvation window)
-    const drainRate = Config.ATP_DRAIN_RATE + (player.traits.size * Config.ATP_DRAIN_MULTIPLIER_SIZE);
+    // Must match Cell.drainATP() calculation including metabolismRate
+    const baseDrain = Config.ATP_DRAIN_RATE;
+    const sizeDrain = player.traits.size * Config.ATP_DRAIN_MULTIPLIER_SIZE;
+    const drainRate = (baseDrain + sizeDrain) * player.traits.metabolismRate;
     const projectedATP = player.traits.atp - (drainRate * Config.AUTO_PILOT_STARVATION_WINDOW_SECONDS);
     const projectedATPRatio = projectedATP / player.traits.maxATP;
     
@@ -210,11 +213,17 @@ export class AutoPilot {
     let nearest: Resource | null = null;
     let nearestDistance = Infinity;
 
+    // Use vision range as detection limit (same as HerbivoreAI)
+    const detectionRange = player.traits.visionRange || 800;
+
     for (const resource of resources) {
+      // Skip already collected resources
+      if (resource.isCollected) continue;
+
       const distance = this.getDistance(player.position, resource.position);
-      
-      // Prefer resources that are closer and needed
-      if (distance < nearestDistance) {
+
+      // Only consider resources within detection range
+      if (distance < nearestDistance && distance < detectionRange) {
         nearestDistance = distance;
         nearest = resource;
       }

@@ -27,7 +27,7 @@ export class HerbivoreAI extends AIBehavior {
     if (predator && this.shouldFlee(predator)) {
       const fleeDirection = this.getDirectionAway(predator.position);
       this.cell.applyForce(fleeDirection, this.cell.traits.speed * 1.5); // Flee faster
-      this.applyBackgroundGrazing(deltaTime, 0.25);
+      // Don't apply background grazing - focus on fleeing!
       return;
     }
 
@@ -42,7 +42,7 @@ export class HerbivoreAI extends AIBehavior {
           const direction = this.getDirectionTo(targetResource.position);
           this.cell.applyForce(direction, this.cell.traits.speed);
         }
-        this.applyBackgroundGrazing(deltaTime, 0.4);
+        // Don't apply background grazing - focus on reaching food!
         return;
       }
     }
@@ -54,7 +54,7 @@ export class HerbivoreAI extends AIBehavior {
       if (safeResource) {
         const direction = this.getDirectionTo(safeResource.position);
         this.cell.applyForce(direction, this.cell.traits.speed * 0.5);
-        this.applyBackgroundGrazing(deltaTime, 0.5);
+        // Don't apply background grazing - focus on reaching reproduction site!
         return;
       }
     }
@@ -103,7 +103,8 @@ export class HerbivoreAI extends AIBehavior {
   }
 
   private isHungry(): boolean {
-    const hungerThreshold = 0.7;
+    // Match AutoPilot's safer threshold - seek food earlier to prevent starvation
+    const hungerThreshold = 0.85;
     const isHungry = this.cell.traits.atp < this.cell.traits.maxATP * hungerThreshold;
     if (!isHungry) {
       this.resourceTargetId = null;
@@ -146,7 +147,8 @@ export class HerbivoreAI extends AIBehavior {
 
     switch (resource.type) {
       case 'glucose':
-        this.cell.restoreATP(Config.ATP_FROM_GLUCOSE * 0.5);
+        // Give full ATP from glucose (not 50%)
+        this.cell.restoreATP(Config.ATP_FROM_GLUCOSE);
         this.cell.collectCompound('glucose', 5);
         break;
       case 'aminoAcid':
