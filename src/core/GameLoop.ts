@@ -25,6 +25,11 @@ import { AutoPilot } from './AutoPilot';
 import { Cell } from '../entities/Cell';
 import { BehaviorType } from '../ai/AIBehavior';
 import type { AISpeciesSetup } from '../ai/PopulationManager';
+import { EventManager } from '../events/EventManager';
+import type { GameEvent } from '../events/EventManager';
+import { AtmosphericSystem } from '../environment/AtmosphericSystem';
+import { FactionSystem } from './FactionSystem';
+import { EcosystemRegulator } from '../ai/EcosystemRegulator';
 
 const MAX_COMPETITOR_SPECIES = 6;
 
@@ -123,6 +128,11 @@ export class GameLoop {
   private autoMode = true; // Auto-pilot mode (cell manages itself)
   private competitionSetup: GameSetupOptions;
   private hasUnlockedMusic = false;
+  private eventManager: EventManager;
+  private atmosphericSystem: AtmosphericSystem;
+  private factionSystem: FactionSystem;
+  private ecosystemRegulator: EcosystemRegulator;
+  private currentEvent: GameEvent | null = null;
 
   constructor() {
     this.renderer = new PixiApp();
@@ -152,6 +162,20 @@ export class GameLoop {
     });
     this.currentSettings = this.saveSystem.getDefaultSettings();
     this.autoPilot = new AutoPilot(this.biomeGenerator);
+
+    // Initialize Phase 5 systems
+    this.eventManager = new EventManager();
+    this.atmosphericSystem = new AtmosphericSystem();
+    this.factionSystem = new FactionSystem();
+    this.ecosystemRegulator = new EcosystemRegulator();
+
+    // Setup event callback
+    this.eventManager.setEventCallback((event) => {
+      this.currentEvent = event;
+      // TODO: Implement showEventNotification in UIController
+      // this.uiController.showEventNotification(event);
+      console.log('[GameLoop] Event triggered:', event.title);
+    });
 
     // Initialize base species for speciation system
     const baseGenome = Genome.createDefault();
@@ -510,6 +534,42 @@ export class GameLoop {
     // Update evolution systems (physics, mating, speciation)
     const allCells = this.entityManager.getAllCells();
     this.evolutionSystems.update(deltaTime, allCells);
+
+    // Update Phase 5 systems
+    const resources = this.entityManager.getResources();
+
+    // Count plants vs animals for atmospheric system
+    let plantCount = 0;
+    let animalCount = 0;
+    allCells.forEach(cell => {
+      if (cell.traits.photosynthesis && cell.traits.photosynthesis > 0) {
+        plantCount++;
+      } else {
+        animalCount++;
+      }
+    });
+
+    // Update atmospheric system
+    if (this.entityManager.playerSpecies) {
+      const center = this.entityManager.playerSpecies.getCenterPosition();
+      this.atmosphericSystem.update(deltaTime, plantCount, animalCount, center.x, center.y);
+    }
+
+    // Update event manager
+    this.eventManager.update(deltaTime, allCells, resources);
+
+    // Update ecosystem regulator
+    const ecosystemStats = this.ecosystemRegulator.calculateStats(allCells, resources);
+    this.ecosystemRegulator.update(ecosystemStats, deltaTime);
+
+    // Update faction progress
+    if (this.entityManager.playerSpecies) {
+      const stats = this.entityManager.playerSpecies.getStats();
+      this.factionSystem.updateProgress('generation', stats.generation);
+      this.factionSystem.updateProgress('population', stats.population);
+      this.factionSystem.updateProgress('diversity', stats.diversity || 0);
+      this.factionSystem.updateProgress('biomass', ecosystemStats.biomass);
+    }
 
     // Update camera to follow species center (species-level view)
     if (this.entityManager.playerSpecies) {
