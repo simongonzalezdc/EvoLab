@@ -183,10 +183,10 @@ export class MusicManager {
       wet: 0.25,
     });
 
-    // Separate reverb for ambient track with 50% wet
+    // Separate reverb for ambient track with 30% wet (reduced from 50% for softer sound)
     this.ambientReverb = new Tone.Reverb({
       decay: 3,
-      wet: 0.5,
+      wet: 0.3,
     });
 
     this.filter = new Tone.Filter({
@@ -209,8 +209,8 @@ export class MusicManager {
     });
 
     // Create per-synth channels with balanced volumes
-    // Ambient volume reduced by 25%: -6dB -> -9dB (approximately -8.5dB for exact 25% reduction)
-    this.ambientChannel = new Tone.Channel({ volume: -9 }).toDestination();
+    // Ambient volume reduced further for gentler sound: -12dB
+    this.ambientChannel = new Tone.Channel({ volume: -12 }).toDestination();
     this.bassChannel = new Tone.Channel({ volume: -8 }).toDestination();
     this.melodyChannel = new Tone.Channel({ volume: -10 }).toDestination();
     this.rhythmChannel = new Tone.Channel({ volume: -18 }).toDestination();
@@ -219,10 +219,10 @@ export class MusicManager {
     this.ambientSynth = new Tone.PolySynth(Tone.Synth, {
       oscillator: { type: 'sine' },
       envelope: {
-        attack: 2,
-        decay: 1,
-        sustain: 0.8,
-        release: 3,
+        attack: 3,    // Increased from 2 for even softer fade-in
+        decay: 1.5,
+        sustain: 0.6, // Reduced from 0.8 for less prominence
+        release: 4,   // Increased from 3 for smoother fade-out
       },
     });
 
@@ -344,7 +344,7 @@ export class MusicManager {
     this.filter.connect(this.masterVolume);
 
     // Volumes are already set in channel creation
-    // Ambient: -9dB (reduced by 25%), Bass: -8dB, Melody: -10dB, Rhythm: -18dB
+    // Ambient: -12dB (reduced for gentler sound), Bass: -8dB, Melody: -10dB, Rhythm: -18dB
   }
 
   async initialize(): Promise<void> {
@@ -482,8 +482,9 @@ export class MusicManager {
 
       const chord = this.buildAmbientChord(notes);
       if (chord.length > 0) {
-        // Longer note duration for more sustained ambience
-        this.ambientSynth.triggerAttackRelease(chord, '1n', time);
+        // Shorter note duration for gentler, less persistent ambience
+        // '2n' = half note, giving space between ambient notes
+        this.ambientSynth.triggerAttackRelease(chord, '2n', time);
       }
     }, interval);
 
@@ -502,7 +503,7 @@ export class MusicManager {
     // Schedule the initial bass note quantized to the grid
     if (this.isEnabled && bassNote) {
       // Schedule at the start of the next measure
-      Tone.Transport.scheduleOnce((time) => {
+      Tone.Transport.scheduleOnce((time: number) => {
         this.bassDrone.triggerAttack(bassNote, time);
       }, '@1m');
     }
@@ -581,14 +582,15 @@ export class MusicManager {
       const isOffbeat = beatInMeasure % 2 === 1;
 
       // Base activity increases with combat intensity
-      let activity = 0.2; // Base 20%
+      // Increased density for more rhythmic presence
+      let activity = 0.35; // Base 35% (up from 20%)
 
       if (isDownbeat) {
-        activity = 0.5 + (this.currentState.combatIntensity * 0.3); // 50-80% on downbeats
+        activity = 0.75 + (this.currentState.combatIntensity * 0.2); // 75-95% on downbeats (up from 50-80%)
       } else if (isOffbeat) {
-        activity = 0.15 + (this.currentState.combatIntensity * 0.25); // 15-40% on offbeats
+        activity = 0.40 + (this.currentState.combatIntensity * 0.3); // 40-70% on offbeats (up from 15-40%)
       } else {
-        activity = 0.1 + (this.currentState.combatIntensity * 0.2); // 10-30% elsewhere
+        activity = 0.25 + (this.currentState.combatIntensity * 0.25); // 25-50% elsewhere (up from 10-30%)
       }
 
       // Trigger based on probability, but always quantized to the grid
@@ -681,31 +683,28 @@ export class MusicManager {
       return [];
     }
 
-    // Use chord progression instead of random selection
+    // Use chord progression to select notes
     // Cycle through I - V - vi - IV progression (common, pleasant)
     const progressionSteps = [0, 4, 5, 3]; // Scale degrees
-    const progressionIndex = Math.floor((Date.now() / 4000) % progressionSteps.length); // Change every 4 seconds
+    const progressionIndex = Math.floor((Date.now() / 12000) % progressionSteps.length); // Change every 12 seconds (slower)
     const rootOffset = progressionSteps[progressionIndex] ?? 0;
 
     const rootIndex = rootOffset % uniqueNotes.length;
 
-    // Build a power chord: root + fifth (2 notes only)
-    // Power chords are more stable and less muddy than triads
+    // Use single notes only for gentle ambience
+    // Single notes are softer and less harsh than chords
     const chord: string[] = [];
 
     const root = uniqueNotes[rootIndex];
-    const fifth = uniqueNotes[(rootIndex + 4) % uniqueNotes.length]; // Fifth is 4 scale degrees up
-
     if (root) chord.push(root);
-    if (fifth && fifth !== root) chord.push(fifth);
 
     return chord;
   }
 
   private getAmbientInterval(): Tone.Unit.Time {
-    // Much slower ambient chords - every 1-2 measures instead of every beat
+    // Slower ambient notes - every 3-4 measures for gentle ambience
     // Base interval: 1 measure = 1m (4 quarter notes)
-    const baseInterval = this.currentState.combatIntensity > 0.5 ? '1m' : '2m';
+    const baseInterval = this.currentState.combatIntensity > 0.5 ? '3m' : '4m';
     return baseInterval as Tone.Unit.Time;
   }
 
