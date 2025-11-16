@@ -1,6 +1,8 @@
 // Biome generation using Perlin noise
 
 import { PerlinNoise } from './PerlinNoise';
+import { getBiomeColorFromAttributes } from './BiomeColor';
+import { Config } from '../core/Config';
 
 export enum BiomeType {
   SHALLOW_WARM = 'shallow_warm',
@@ -61,11 +63,12 @@ export class BiomeGenerator {
     const nx = (x + this.width / 2) / this.width;
     const ny = (y + this.height / 2) / this.height;
 
-    // Generate noise values
-    const tempValue = this.tempNoise.octaveNoise(nx * 3, ny * 3, 4, 0.5);
-    const depthValue = this.depthNoise.octaveNoise(nx * 2, ny * 2, 3, 0.6);
-    const nutrientValue = this.nutrientNoise.octaveNoise(nx * 4, ny * 4, 3, 0.4);
-    const toxicValue = this.toxicNoise.octaveNoise(nx * 5, ny * 5, 2, 0.3);
+    // Generate noise values with smoother transitions
+    const smoothness = Config.BIOME_TRANSITION_SMOOTHNESS;
+    const tempValue = this.tempNoise.octaveNoise(nx * 3 * (1 - smoothness), ny * 3 * (1 - smoothness), 4, 0.5);
+    const depthValue = this.depthNoise.octaveNoise(nx * 2 * (1 - smoothness), ny * 2 * (1 - smoothness), 3, 0.6);
+    const nutrientValue = this.nutrientNoise.octaveNoise(nx * 4 * (1 - smoothness), ny * 4 * (1 - smoothness), 3, 0.4);
+    const toxicValue = this.toxicNoise.octaveNoise(nx * 5 * (1 - smoothness), ny * 5 * (1 - smoothness), 2, 0.3);
 
     // Map to ranges
     const temperature = this.mapRange(tempValue, -1, 1, 5, 35); // 5-35°C
@@ -80,7 +83,20 @@ export class BiomeGenerator {
     const light = this.calculateLight(depth);
     const pH = this.calculatePH(toxicity, nutrients);
     const pressure = depth;
-    const color = this.getBiomeColor(type);
+    
+    // Use semantic color system
+    const normalizedTemp = (temperature - 5) / 30; // 5-35°C -> 0-1
+    const normalizedDepth = depth / 10; // 0-10 -> 0-1
+    const normalizedNutrients = nutrients / 10; // 0-10 -> 0-1
+    
+    // Determine hazard type
+    let hazardType: 'toxic' | 'volcanic' | 'frozen' | 'pressure' | 'none' = 'none';
+    if (type === BiomeType.VOLCANIC) hazardType = 'volcanic';
+    else if (type === BiomeType.FROZEN) hazardType = 'frozen';
+    else if (type === BiomeType.TOXIC || type === BiomeType.SWAMP) hazardType = 'toxic';
+    else if (depth > 7) hazardType = 'pressure';
+    
+    const color = getBiomeColorFromAttributes(normalizedTemp, normalizedDepth, hazardType, normalizedNutrients);
     const hazards = this.calculateHazards(type, temperature, depth, nx, ny);
 
     return {
@@ -118,23 +134,21 @@ export class BiomeGenerator {
       return BiomeType.FROZEN;
     }
 
-    // High nutrients and high toxicity = swamp
-    if (nutrients > 6 && toxicity > 3) {
-      return BiomeType.SWAMP;
-    }
-
-    // Moderate temp, low toxicity, moderate depth = crystal
-    if (temp > 18 && temp < 24 && toxicity < 2 && depth > 4 && depth < 7) {
-      return BiomeType.CRYSTAL;
-    }
-
-    // High toxicity = toxic biome
+    // High toxicity = toxic biome (SWAMP is now a variant of TOXIC)
     if (toxicity > 4) {
+      // Check if it's a swamp variant (high nutrients + high toxicity)
+      if (nutrients > 6 && toxicity > 3 && Math.random() < Config.RARE_BIOME_WEIGHT) {
+        return BiomeType.SWAMP; // Rare variant
+      }
       return BiomeType.TOXIC;
     }
 
-    // High nutrients = nutrient rich
+    // High nutrients = nutrient rich (CRYSTAL is now a variant of NUTRIENT_RICH)
     if (nutrients > 7) {
+      // Check if it's a crystal variant (moderate temp, low toxicity, moderate depth)
+      if (temp > 18 && temp < 24 && toxicity < 2 && depth > 4 && depth < 7 && Math.random() < Config.RARE_BIOME_WEIGHT) {
+        return BiomeType.CRYSTAL; // Rare variant
+      }
       return BiomeType.NUTRIENT_RICH;
     }
 
@@ -166,35 +180,12 @@ export class BiomeGenerator {
     return Math.max(5, Math.min(9, pH));
   }
 
-  private getBiomeColor(type: BiomeType): number {
-    switch (type) {
-      case BiomeType.SHALLOW_WARM:
-        return 0x4dd0e1; // Light cyan
-      case BiomeType.SHALLOW_COLD:
-        return 0x81d4fa; // Light blue
-      case BiomeType.DEEP_WARM:
-        return 0x0277bd; // Dark cyan
-      case BiomeType.DEEP_COLD:
-        return 0x01579b; // Deep blue
-      case BiomeType.TOXIC:
-        return 0x7b1fa2; // Purple
-      case BiomeType.NUTRIENT_RICH:
-        return 0x66bb6a; // Green
-      case BiomeType.BARREN:
-        return 0x5d4037; // Brown
-      case BiomeType.VOLCANIC:
-        return 0xff6d00; // Orange-red
-      case BiomeType.FROZEN:
-        return 0xb3e5fc; // Ice blue
-      case BiomeType.SWAMP:
-        return 0x558b2f; // Dark green
-      case BiomeType.CRYSTAL:
-        return 0x9c27b0; // Bright purple
-      case BiomeType.ABYSS:
-        return 0x1a237e; // Very dark blue
-      default:
-        return 0x0a0e27;
-    }
+  // Deprecated: Use getBiomeColorFromAttributes instead
+  // Kept for backward compatibility but should not be used
+  private getBiomeColor(_type: BiomeType): number {
+    // This method is deprecated - colors are now calculated semantically
+    // Return a default color as fallback
+    return 0x0a0e27;
   }
 
   private calculateHazards(

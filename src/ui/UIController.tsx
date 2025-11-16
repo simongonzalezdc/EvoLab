@@ -261,6 +261,10 @@ export class UIController {
           {state.showBiomeLegend && (
             <BiomeLegend
               onToggle={() => setState(s => ({ ...s, showBiomeLegend: !s.showBiomeLegend }))}
+              onBiomeHover={(biomeType) => {
+                // Dispatch event for biome highlighting
+                window.dispatchEvent(new CustomEvent('biomeHighlight', { detail: biomeType }));
+              }}
             />
           )}
 

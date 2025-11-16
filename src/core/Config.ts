@@ -41,6 +41,10 @@ export const Config = {
   LAKE_WIDTH: 2000,
   LAKE_HEIGHT: 1500,
 
+  // Biome generation settings
+  RARE_BIOME_WEIGHT: 0.15, // 15% chance for rare biomes (CRYSTAL, SWAMP)
+  BIOME_TRANSITION_SMOOTHNESS: 0.3, // Lower = smoother transitions (0-1)
+
   // Game loop settings
   TARGET_FPS: 60,
   FIXED_TIMESTEP: 1000 / 60, // 16.67ms per frame

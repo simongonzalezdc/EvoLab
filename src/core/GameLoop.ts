@@ -220,6 +220,12 @@ export class GameLoop {
       const presetIndex = e.detail;
       this.musicManager.applyPreset(presetIndex);
     }) as EventListener);
+
+    // Setup biome highlight handler
+    window.addEventListener('biomeHighlight', ((e: CustomEvent<string | null>) => {
+      const biomeType = e.detail;
+      this.biomeRenderer.setHighlightedBiome(biomeType);
+    }) as EventListener);
   }
 
   // Toggle auto-pilot mode

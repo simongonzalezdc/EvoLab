@@ -8,6 +8,7 @@ export class BiomeRenderer {
   private biomeGenerator: BiomeGenerator;
   private tileSize = 50; // Size of each biome tile
   private tiles: Map<string, Graphics> = new Map();
+  private highlightedBiomeType: string | null = null; // BiomeType to highlight
 
   constructor(biomeGenerator: BiomeGenerator) {
     this.container = new Container();
@@ -32,6 +33,17 @@ export class BiomeRenderer {
 
         if (!this.tiles.has(key)) {
           this.createTile(x, y);
+        } else if (this.highlightedBiomeType !== null) {
+          // Update existing tile if highlight changed
+          const biome = this.biomeGenerator.getBiomeAt(x, y);
+          const tile = this.tiles.get(key);
+          if (tile && this.highlightedBiomeType === biome.type) {
+            // Recreate tile to update highlight
+            this.container.removeChild(tile);
+            tile.destroy();
+            this.tiles.delete(key);
+            this.createTile(x, y);
+          }
         }
       }
     }
@@ -50,15 +62,43 @@ export class BiomeRenderer {
     const biome = this.biomeGenerator.getBiomeAt(x, y);
     const tile = new Graphics();
 
+    // Check if this tile should be highlighted
+    const isHighlighted = this.highlightedBiomeType === biome.type;
+    const alpha = isHighlighted ? 0.6 : 0.3; // Brighter when highlighted
+    const outlineColor = isHighlighted ? 0xffffff : 0x000000;
+    const outlineWidth = isHighlighted ? 2 : 0;
+
     // Draw tile with biome color
     tile.rect(0, 0, this.tileSize, this.tileSize);
-    tile.fill({ color: biome.color, alpha: 0.3 });
+    tile.fill({ color: biome.color, alpha });
+    if (outlineWidth > 0) {
+      tile.stroke({ color: outlineColor, width: outlineWidth, alpha: 0.8 });
+    }
 
     tile.x = x;
     tile.y = y;
 
     this.container.addChild(tile);
     this.tiles.set(`${x},${y}`, tile);
+  }
+
+  // Highlight a specific biome type (for interactive legend)
+  setHighlightedBiome(biomeType: string | null): void {
+    if (this.highlightedBiomeType !== biomeType) {
+      this.highlightedBiomeType = biomeType;
+      // Re-render all tiles to update highlights
+      this.tiles.forEach((tile, key) => {
+        const parts = key.split(',');
+        const x = Number(parts[0]);
+        const y = Number(parts[1]);
+        if (!isNaN(x) && !isNaN(y)) {
+          this.container.removeChild(tile);
+          tile.destroy();
+          this.tiles.delete(key);
+          this.createTile(x, y);
+        }
+      });
+    }
   }
 
   getContainer(): Container {
