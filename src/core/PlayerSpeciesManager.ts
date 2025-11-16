@@ -38,16 +38,10 @@ export class PlayerSpeciesManager {
 
   // Initialize the species with starting population
   initialize(): void {
-    const halfWidth = Config.LAKE_WIDTH / 2;
-    const halfHeight = Config.LAKE_HEIGHT / 2;
-    const spawnRadius = 200; // Spawn in a cluster
-
     for (let i = 0; i < this.initialPopulationSize; i++) {
-      // Spawn in a cluster around starting position
-      const angle = (Math.PI * 2 * i) / this.initialPopulationSize;
-      const distance = Math.random() * spawnRadius;
-      const x = Config.PLAYER_START_X + Math.cos(angle) * distance;
-      const y = Config.PLAYER_START_Y + Math.sin(angle) * distance;
+      // Scatter across the full lake so the species explores immediately
+      const x = (Math.random() - 0.5) * Config.LAKE_WIDTH;
+      const y = (Math.random() - 0.5) * Config.LAKE_HEIGHT;
 
       // Create cell with slight genetic variation
       const genome = this.baseGenome.clone();
@@ -94,17 +88,21 @@ export class PlayerSpeciesManager {
       // Filter out this cell from allCells to avoid self-reference
       const otherCells = allCells.filter(c => c.id !== cell.id);
       const direction = this.autoPilot.getMovementDirection(cell, otherCells, resources, deltaTime);
-      
-      // Always apply movement - auto-pilot should always return a direction (at least wander)
+
+      const applyCellForce = (dir: { x: number; y: number }, strength: number) => {
+        const magnitude = Math.hypot(cell.velocity.x, cell.velocity.y);
+        if (magnitude < 0.5) {
+          strength *= 1.5;
+        }
+        cell.applyForce(dir, strength);
+      };
+
       if (direction.x !== 0 || direction.y !== 0) {
-        cell.applyForce(direction, Config.ACCELERATION);
+        applyCellForce(direction, Config.ACCELERATION * 1.5);
       } else {
-        // Fallback: ensure cells always have some movement
         const fallbackAngle = (cell.id.charCodeAt(0) + Date.now() * 0.001) % (Math.PI * 2);
-        cell.applyForce(
-          { x: Math.cos(fallbackAngle), y: Math.sin(fallbackAngle) },
-          Config.ACCELERATION * 0.3
-        );
+        const fallbackDirection = { x: Math.cos(fallbackAngle), y: Math.sin(fallbackAngle) };
+        applyCellForce(fallbackDirection, Config.ACCELERATION * 0.75);
       }
 
       // Check resource collection
@@ -325,4 +323,3 @@ export class PlayerSpeciesManager {
     this.cells = [];
   }
 }
-

@@ -3,14 +3,18 @@
 import { AIBehavior, BehaviorType } from './AIBehavior';
 import { Cell } from '../entities/Cell';
 import { Resource } from '../entities/Resource';
+import { Config } from '../core/Config';
 
 export class HerbivoreAI extends AIBehavior {
   private wanderCooldown = 0;
   private wanderDirection = this.wander();
   private stuckTimer = 0;
+  private resourceTargetId: string | null = null;
 
   constructor(cell: Cell) {
     super(cell, BehaviorType.HERBIVORE);
+    // Herbivores rely on strong foraging instincts—give them a long detection range
+    this.detectionRange = Math.max(this.detectionRange, 800);
   }
 
   update(deltaTime: number, nearbyCells: Cell[], nearbyResources: Resource[]): void {
@@ -23,15 +27,22 @@ export class HerbivoreAI extends AIBehavior {
     if (predator && this.shouldFlee(predator)) {
       const fleeDirection = this.getDirectionAway(predator.position);
       this.cell.applyForce(fleeDirection, this.cell.traits.speed * 1.5); // Flee faster
+      this.applyBackgroundGrazing(deltaTime, 0.25);
       return;
     }
 
     // Priority 2: Seek food if hungry
-    if (this.cell.traits.atp < this.cell.traits.maxATP * 0.6) {
-      const nearestResource = this.findNearestResource(nearbyResources);
-      if (nearestResource) {
-        const direction = this.getDirectionTo(nearestResource.position);
-        this.cell.applyForce(direction, this.cell.traits.speed);
+    if (this.isHungry()) {
+      const targetResource = this.getResourceTarget(nearbyResources);
+      if (targetResource) {
+        const distance = this.cell.distanceTo(targetResource.position);
+        if (distance < Config.RESOURCE_COLLECTION_RANGE) {
+          this.consumeResource(targetResource);
+        } else {
+          const direction = this.getDirectionTo(targetResource.position);
+          this.cell.applyForce(direction, this.cell.traits.speed);
+        }
+        this.applyBackgroundGrazing(deltaTime, 0.4);
         return;
       }
     }
@@ -43,26 +54,13 @@ export class HerbivoreAI extends AIBehavior {
       if (safeResource) {
         const direction = this.getDirectionTo(safeResource.position);
         this.cell.applyForce(direction, this.cell.traits.speed * 0.5);
+        this.applyBackgroundGrazing(deltaTime, 0.5);
         return;
       }
     }
 
     // Priority 4: Wander with gentle drifting so they never stagnate
-    this.updateWanderDirection(deltaTime);
-    const speedMagnitude = Math.hypot(this.cell.velocity.x, this.cell.velocity.y);
-    if (speedMagnitude < 0.2) {
-      this.stuckTimer += deltaTime;
-    } else {
-      this.stuckTimer = 0;
-    }
-
-    if (this.stuckTimer > 1.5) {
-      // Completely refresh direction if we've barely moved for a while
-      this.wanderDirection = this.wander();
-      this.stuckTimer = 0;
-    }
-
-    this.cell.applyForce(this.wanderDirection, Math.max(1, this.cell.traits.speed * 0.6));
+    this.applyBackgroundGrazing(deltaTime, 0.8);
   }
 
   private updateWanderDirection(deltaTime: number): void {
@@ -85,5 +83,78 @@ export class HerbivoreAI extends AIBehavior {
       x: blended.x / length,
       y: blended.y / length,
     };
+  }
+
+  private applyBackgroundGrazing(deltaTime: number, intensity: number): void {
+    this.updateWanderDirection(deltaTime);
+    const speedMagnitude = Math.hypot(this.cell.velocity.x, this.cell.velocity.y);
+    if (speedMagnitude < 0.2) {
+      this.stuckTimer += deltaTime;
+    } else {
+      this.stuckTimer = 0;
+    }
+
+    if (this.stuckTimer > 0.6) {
+      this.wanderDirection = this.wander();
+      this.stuckTimer = 0;
+    }
+    const baseForce = this.cell.traits.speed * intensity + 0.8;
+    this.cell.applyForce(this.wanderDirection, baseForce);
+  }
+
+  private isHungry(): boolean {
+    const hungerThreshold = 0.7;
+    const isHungry = this.cell.traits.atp < this.cell.traits.maxATP * hungerThreshold;
+    if (!isHungry) {
+      this.resourceTargetId = null;
+    }
+    return isHungry;
+  }
+
+  private getResourceTarget(resources: Resource[]): Resource | null {
+    if (this.resourceTargetId) {
+      const current = resources.find(r => r.id === this.resourceTargetId && !r.isCollected);
+      if (current) {
+        return current;
+      }
+      this.resourceTargetId = null;
+    }
+
+    let best: Resource | null = null;
+    let bestDistance = Infinity;
+    for (const resource of resources) {
+      if (resource.isCollected) continue;
+      const distance = this.cell.distanceTo(resource.position);
+      if (distance < bestDistance && distance < this.detectionRange) {
+        bestDistance = distance;
+        best = resource;
+      }
+    }
+
+    this.resourceTargetId = best?.id ?? null;
+    return best;
+  }
+
+  private consumeResource(resource: Resource): void {
+    if (resource.isCollected) {
+      this.resourceTargetId = null;
+      return;
+    }
+
+    resource.collect();
+    this.resourceTargetId = null;
+
+    switch (resource.type) {
+      case 'glucose':
+        this.cell.restoreATP(Config.ATP_FROM_GLUCOSE * 0.5);
+        this.cell.collectCompound('glucose', 5);
+        break;
+      case 'aminoAcid':
+        this.cell.collectCompound('aminoAcid', 3);
+        break;
+      case 'phosphate':
+        this.cell.collectCompound('phosphate', 2);
+        break;
+    }
   }
 }

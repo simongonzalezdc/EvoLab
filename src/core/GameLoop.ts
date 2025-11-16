@@ -120,6 +120,7 @@ export class GameLoop {
   private autoPilot: AutoPilot;
   private autoMode = true; // Auto-pilot mode (cell manages itself)
   private competitionSetup: GameSetupOptions;
+  private hasUnlockedMusic = false;
 
   constructor() {
     this.renderer = new PixiApp();
@@ -160,6 +161,7 @@ export class GameLoop {
 
     // Setup UI callbacks
     this.setupUICallbacks();
+    this.setupMusicUnlock();
 
     // Setup zoom controls
     this.setupZoomControls();
@@ -301,6 +303,29 @@ export class GameLoop {
       const biomeType = e.detail;
       this.biomeRenderer.setHighlightedBiome(biomeType);
     }) as EventListener);
+  }
+
+  private setupMusicUnlock(): void {
+    if (typeof window === 'undefined' || this.hasUnlockedMusic) {
+      return;
+    }
+
+    const unlock = async () => {
+      if (this.hasUnlockedMusic) return;
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+      try {
+        await this.musicManager.enable();
+        this.hasUnlockedMusic = true;
+      } catch (error) {
+        console.warn('[GameLoop] Failed to unlock music on interaction:', error);
+        this.hasUnlockedMusic = false;
+        this.setupMusicUnlock();
+      }
+    };
+
+    window.addEventListener('pointerdown', unlock);
+    window.addEventListener('keydown', unlock);
   }
 
   // Toggle auto-pilot mode

@@ -39,6 +39,26 @@ const getDefaultSpeciesSetup = (): SpeciesSetupOption[] => [
   createSpeciesSetup('omnivore', Config.OMNIVORE_POPULATION),
 ];
 
+const SETUP_SEEN_KEY = 'evolab_setup_seen';
+
+const hasSeenSetup = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  try {
+    return localStorage.getItem(SETUP_SEEN_KEY) === 'true';
+  } catch {
+    return false;
+  }
+};
+
+const markSetupSeen = (): void => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(SETUP_SEEN_KEY, 'true');
+  } catch {
+    // ignore
+  }
+};
+
 interface PhylogeneticNode {
   speciesId: string;
   parentSpeciesId: string | null;
@@ -123,7 +143,7 @@ export class UIController {
 
   private render() {
     const UIComponent = () => {
-      const [state, setState] = useState<UIState>({
+      const [state, setState] = useState<UIState>(() => ({
         showTraitEditor: false,
         showGenerationReport: false,
         showStats: false,
@@ -135,7 +155,7 @@ export class UIController {
         showPhylogeneticTree: false,
         showBiomeLegend: true, // Default: visible
         showMusicDevTools: false,
-        showGameSetup: false,
+        showGameSetup: !hasSeenSetup(),
         deathCause: 'atp',
         currentTraits: null,
         physicsEnabled: false,
@@ -158,7 +178,7 @@ export class UIController {
         challenges: [],
         achievementNotifications: [],
         gameSetupSpecies: getDefaultSpeciesSetup(),
-      });
+      }));
 
       useEffect(() => {
         this.setState = setState;
@@ -217,6 +237,7 @@ export class UIController {
 
       const handleCancelGameSetup = () => {
         setState(s => ({ ...s, showGameSetup: false }));
+        markSetupSeen();
       };
 
       const handleStartGame = () => {
@@ -225,6 +246,7 @@ export class UIController {
           species: state.gameSetupSpecies.map(spec => ({ ...spec })),
         };
         setState(s => ({ ...s, showGameSetup: false }));
+        markSetupSeen();
         this.onNewGame?.(options);
       };
 
@@ -296,6 +318,7 @@ export class UIController {
               // Force re-render to update button state
               setState(s => ({ ...s }));
             }}
+            onShowGameSetup={() => setState(s => ({ ...s, showGameSetup: true }))}
             autoMode={this.getAutoModeState?.() || false}
             showStats={state.showStats}
           />

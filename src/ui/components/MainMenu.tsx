@@ -9,6 +9,7 @@ interface MainMenuProps {
   onToggleStats: () => void;
   onAchievements: () => void;
   onToggleAutoMode: () => void;
+  onShowGameSetup: () => void;
   autoMode: boolean;
   showStats: boolean;
 }
@@ -22,6 +23,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onToggleStats,
   onAchievements,
   onToggleAutoMode,
+  onShowGameSetup,
   autoMode,
   showStats,
 }) => {
@@ -99,6 +101,22 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             }}
           >
             🎮 New Game
+          </button>
+
+          <button
+            onClick={onShowGameSetup}
+            style={{
+              padding: '10px 15px',
+              background: '#22d3ee',
+              color: '#000',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              fontSize: '14px',
+            }}
+          >
+            🌊 Ecosystem Setup
           </button>
 
           <button
