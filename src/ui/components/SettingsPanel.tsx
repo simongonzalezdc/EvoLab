@@ -187,6 +187,83 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           )}
         </div>
 
+        {/* Mutation Settings */}
+        <div style={{ marginBottom: '20px' }}>
+          <h3 style={{ color: '#fff', fontSize: '18px', marginBottom: '10px' }}>🧬 Evolution</h3>
+
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', color: '#fff', marginBottom: '4px' }}>
+              Mutation Rate: {Math.round((localSettings.mutationRate ?? 0.15) * 100)}%
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={localSettings.mutationRate ?? 0.15}
+              onChange={e => handleChange('mutationRate', parseFloat(e.target.value))}
+              style={{ width: '100%' }}
+            />
+            <p style={{ color: '#888', fontSize: '12px', margin: '4px 0 0 0' }}>
+              How often traits mutate (0% = no mutations, 100% = all traits mutate)
+            </p>
+          </div>
+
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', color: '#fff', marginBottom: '4px' }}>
+              Mutation Magnitude: {Math.round((localSettings.mutationMagnitude ?? 0.15) * 100)}%
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="0.5"
+              step="0.05"
+              value={localSettings.mutationMagnitude ?? 0.15}
+              onChange={e => handleChange('mutationMagnitude', parseFloat(e.target.value))}
+              style={{ width: '100%' }}
+            />
+            <p style={{ color: '#888', fontSize: '12px', margin: '4px 0 0 0' }}>
+              How much traits change when they mutate (±0% to ±50%)
+            </p>
+          </div>
+
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', color: '#fff', marginBottom: '4px' }}>
+              Beneficial Bias: {Math.round((localSettings.beneficialBias ?? 0.1) * 100)}%
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              value={localSettings.beneficialBias ?? 0.1}
+              onChange={e => handleChange('beneficialBias', parseFloat(e.target.value))}
+              style={{ width: '100%' }}
+            />
+            <p style={{ color: '#888', fontSize: '12px', margin: '4px 0 0 0' }}>
+              Tendency toward beneficial mutations (0% = pure random, 100% = always beneficial)
+            </p>
+          </div>
+        </div>
+
+        {/* Event Settings */}
+        <div style={{ marginBottom: '20px' }}>
+          <h3 style={{ color: '#fff', fontSize: '18px', marginBottom: '10px' }}>⚡ Events</h3>
+
+          <label style={{ display: 'flex', alignItems: 'center', color: '#fff', marginBottom: '8px' }}>
+            <input
+              type="checkbox"
+              checked={localSettings.randomEventsEnabled ?? true}
+              onChange={e => handleChange('randomEventsEnabled', e.target.checked)}
+              style={{ marginRight: '8px' }}
+            />
+            Enable Random Events
+          </label>
+          <p style={{ color: '#888', fontSize: '12px', margin: '4px 0 0 24px' }}>
+            Asteroids, diseases, algae blooms, and other unpredictable events
+          </p>
+        </div>
+
         {/* Developer Tools */}
         {onShowMusicDevTools && (
           <div style={{ marginBottom: '20px', padding: '15px', background: '#2a2a2a', borderRadius: '6px' }}>
