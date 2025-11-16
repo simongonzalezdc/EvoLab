@@ -177,6 +177,58 @@ export class AutoPilot {
     return direction;
   }
 
+  // Assess nearby threats and determine if cell should flee
+  private assessThreats(player: Cell, allCells: Cell[]): {
+    shouldFlee: boolean;
+    threatCount: number;
+    threatCenter: Vector2D;
+    powerRatio: number;
+  } {
+    const detectionRange = 200;
+    const threats: Cell[] = [];
+    let totalThreatPower = 0;
+    const playerPower = player.traits.size * (1 + player.traits.armor * 0.5 + player.traits.toxin * 0.3);
+
+    // Find all nearby threats
+    allCells.forEach(cell => {
+      if (cell.id === player.id) return;
+
+      const distance = Math.sqrt(
+        Math.pow(cell.position.x - player.position.x, 2) +
+        Math.pow(cell.position.y - player.position.y, 2)
+      );
+
+      if (distance < detectionRange) {
+        // Consider as threat if larger, more aggressive, or has more combat traits
+        const cellPower = cell.traits.size * (1 + cell.traits.armor * 0.5 + cell.traits.toxin * 0.3);
+        const isThreat = cellPower > playerPower * 0.7 || cell.traits.aggression > 5;
+
+        if (isThreat) {
+          threats.push(cell);
+          totalThreatPower += cellPower;
+        }
+      }
+    });
+
+    // Calculate threat center (average position of threats)
+    let threatCenter = { x: player.position.x, y: player.position.y };
+    if (threats.length > 0) {
+      threatCenter.x = threats.reduce((sum, t) => sum + t.position.x, 0) / threats.length;
+      threatCenter.y = threats.reduce((sum, t) => sum + t.position.y, 0) / threats.length;
+    }
+
+    // Decide if should flee: outnumbered (3+ threats) OR outmatched (total power > 2x player power)
+    const powerRatio = totalThreatPower / playerPower;
+    const shouldFlee = threats.length >= 3 || powerRatio > 2.0;
+
+    return {
+      shouldFlee,
+      threatCount: threats.length,
+      threatCenter,
+      powerRatio,
+    };
+  }
+
   private findNearestPredator(player: Cell, allCells: Cell[]): Cell | null {
     let nearest: Cell | null = null;
     let nearestDistance = Infinity;
