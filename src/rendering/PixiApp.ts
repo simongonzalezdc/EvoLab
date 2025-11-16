@@ -8,6 +8,9 @@ export class PixiApp {
   public worldContainer: Container;
   private biomeLayer: Container | null = null;
   private isInitialized = false;
+  private zoomLevel: number = 1.0;
+  private minZoom: number = 0.5;
+  private maxZoom: number = 3.0;
 
   constructor() {
     this.app = new Application();
@@ -63,10 +66,33 @@ export class PixiApp {
   // Update camera to follow target position
   updateCamera(targetX: number, targetY: number): void {
     // Camera follows player - use actual canvas size
+    // Account for zoom level in camera positioning
     const width = this.app.canvas.width;
     const height = this.app.canvas.height;
-    this.worldContainer.x = width / 2 - targetX;
-    this.worldContainer.y = height / 2 - targetY;
+    this.worldContainer.x = width / 2 - targetX * this.zoomLevel;
+    this.worldContainer.y = height / 2 - targetY * this.zoomLevel;
+  }
+
+  // Zoom methods
+  zoomIn(factor: number = 1.2): void {
+    this.setZoom(this.zoomLevel * factor);
+  }
+
+  zoomOut(factor: number = 1.2): void {
+    this.setZoom(this.zoomLevel / factor);
+  }
+
+  setZoom(level: number): void {
+    this.zoomLevel = Math.max(this.minZoom, Math.min(this.maxZoom, level));
+    this.worldContainer.scale.set(this.zoomLevel, this.zoomLevel);
+  }
+
+  getZoom(): number {
+    return this.zoomLevel;
+  }
+
+  resetZoom(): void {
+    this.setZoom(1.0);
   }
 
   // Create a circular sprite (for cells)

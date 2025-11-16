@@ -128,6 +128,9 @@ export class PlayerSpeciesManager {
         const distance = cell.distanceTo(resource.position);
         if (distance < Config.RESOURCE_COLLECTION_RANGE) {
           resource.collect();
+          // Clear cached target when resource is collected
+          this.autoPilot.clearTarget(cell.id);
+          
           if (resource.type === 'glucose') {
             cell.restoreATP(Config.ATP_FROM_GLUCOSE);
             cell.collectCompound('glucose', 5);

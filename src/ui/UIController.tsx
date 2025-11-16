@@ -15,6 +15,9 @@ import { AchievementsPanel } from './components/AchievementsPanel';
 import { AchievementNotification } from './components/AchievementNotification';
 import { EvolutionControlPanel } from './components/EvolutionControlPanel';
 import { PhylogeneticTreePanel } from './components/PhylogeneticTreePanel';
+import { BiomeLegend } from './components/BiomeLegend';
+import { ZoomControls } from './components/ZoomControls';
+import { MusicDevTools } from './components/MusicDevTools';
 import type { Traits, Species } from '../types/entities';
 import type { TimeControl } from '../core/TimeControl';
 import type { SaveSystem, GameSettings, SavedSimulation, SavedCreature } from '../data/SaveSystem';
@@ -39,6 +42,8 @@ interface UIState {
   showDeathScreen: boolean;
   showAchievements: boolean;
   showPhylogeneticTree: boolean;
+  showBiomeLegend: boolean;
+  showMusicDevTools: boolean;
   deathCause: 'atp' | 'health';
   currentTraits: Traits | null;
   physicsEnabled: boolean;
@@ -80,6 +85,11 @@ export class UIController {
   private onShowPhylogeneticTree: (() => void) | null = null;
   private onToggleAutoMode: (() => void) | null = null;
   private getAutoModeState: (() => boolean) | null = null;
+  private getZoomLevel: (() => number) | null = null;
+  private onZoomIn: (() => void) | null = null;
+  private onZoomOut: (() => void) | null = null;
+  private onResetZoom: (() => void) | null = null;
+  private getMusicManager: (() => any) | null = null;
   private timeControl: TimeControl;
   private saveSystem: SaveSystem;
 
@@ -106,6 +116,8 @@ export class UIController {
         showDeathScreen: false,
         showAchievements: false,
         showPhylogeneticTree: false,
+        showBiomeLegend: true, // Default: visible
+        showMusicDevTools: false,
         deathCause: 'atp',
         currentTraits: null,
         physicsEnabled: false,
@@ -245,6 +257,31 @@ export class UIController {
             matingStats={state.matingStats || undefined}
           />
 
+          {/* Biome Legend */}
+          {state.showBiomeLegend && (
+            <BiomeLegend
+              onToggle={() => setState(s => ({ ...s, showBiomeLegend: !s.showBiomeLegend }))}
+            />
+          )}
+
+          {/* Zoom Controls */}
+          {this.getZoomLevel && (
+            <ZoomControls
+              currentZoom={this.getZoomLevel()}
+              onZoomIn={() => this.onZoomIn?.()}
+              onZoomOut={() => this.onZoomOut?.()}
+              onResetZoom={() => this.onResetZoom?.()}
+            />
+          )}
+
+          {/* Music Dev Tools */}
+          {state.showMusicDevTools && this.getMusicManager && (
+            <MusicDevTools
+              musicManager={this.getMusicManager()}
+              onClose={() => setState(s => ({ ...s, showMusicDevTools: false }))}
+            />
+          )}
+
           {/* Stats Panel */}
           {state.showStats && state.currentTraits && (
             <StatsPanel
@@ -283,6 +320,7 @@ export class UIController {
               settings={state.settings}
               onSettingsChange={handleSettingsChange}
               onClose={() => setState(s => ({ ...s, showSettings: false }))}
+              onShowMusicDevTools={() => setState(s => ({ ...s, showMusicDevTools: true, showSettings: false }))}
             />
           )}
 
@@ -483,6 +521,26 @@ export class UIController {
 
   setAutoModeStateCallback(callback: () => boolean) {
     this.getAutoModeState = callback;
+  }
+
+  setZoomCallbacks(
+    getZoom: () => number,
+    onZoomIn: () => void,
+    onZoomOut: () => void,
+    onResetZoom: () => void
+  ) {
+    this.getZoomLevel = getZoom;
+    this.onZoomIn = onZoomIn;
+    this.onZoomOut = onZoomOut;
+    this.onResetZoom = onResetZoom;
+  }
+
+  setMusicManagerCallback(getMusicManager: () => any): void {
+    this.getMusicManager = getMusicManager;
+  }
+
+  showMusicDevTools(): void {
+    this.setState?.(s => ({ ...s, showMusicDevTools: true }));
   }
 
   updateEvolutionControls(

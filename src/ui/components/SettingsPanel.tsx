@@ -5,12 +5,14 @@ interface SettingsPanelProps {
   settings: GameSettings;
   onSettingsChange: (settings: GameSettings) => void;
   onClose: () => void;
+  onShowMusicDevTools?: () => void;
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   settings,
   onSettingsChange,
   onClose,
+  onShowMusicDevTools,
 }) => {
   const [localSettings, setLocalSettings] = useState<GameSettings>(settings);
 
@@ -184,6 +186,31 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             </div>
           )}
         </div>
+
+        {/* Developer Tools */}
+        {onShowMusicDevTools && (
+          <div style={{ marginBottom: '20px', padding: '15px', background: '#2a2a2a', borderRadius: '6px' }}>
+            <h3 style={{ color: '#4caf50', fontSize: '16px', marginBottom: '10px' }}>Developer Tools</h3>
+            <button
+              onClick={() => {
+                onShowMusicDevTools();
+                onClose();
+              }}
+              style={{
+                padding: '8px 16px',
+                background: '#4caf50',
+                color: '#000',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: 'bold',
+                fontSize: '14px',
+              }}
+            >
+              🎵 Music Dev Tools
+            </button>
+          </div>
+        )}
 
         {/* Buttons */}
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>

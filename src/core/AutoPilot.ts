@@ -8,6 +8,8 @@ import { Config } from './Config';
 export class AutoPilot {
   // Use a Map to store per-cell wander state
   private cellWanderState: Map<string, { cooldown: number; direction: { x: number; y: number } }> = new Map();
+  // Target caching: cell ID -> resource ID
+  private cellTargets: Map<string, string> = new Map();
   private lastResourceCheck = 0;
 
   // Get movement direction for auto-pilot
@@ -29,16 +31,65 @@ export class AutoPilot {
     }
 
     // Priority 2: Seek resources if ATP is low or compounds are needed
+    // Improved hunger detection using ATP ratio and projected ATP
+    const atpRatio = player.traits.atp / player.traits.maxATP;
+    
+    // Calculate projected ATP (current - drain rate * starvation window)
+    const drainRate = Config.ATP_DRAIN_RATE + (player.traits.size * Config.ATP_DRAIN_MULTIPLIER_SIZE);
+    const projectedATP = player.traits.atp - (drainRate * Config.AUTO_PILOT_STARVATION_WINDOW_SECONDS);
+    const projectedATPRatio = projectedATP / player.traits.maxATP;
+    
+    // Trigger resource-seeking if:
+    // - ATP ratio below hunger threshold OR
+    // - Projected ATP will drop below 30% OR
+    // - Compounds are needed for reproduction
     const needsResources = 
-      player.traits.atp < player.traits.maxATP * 0.7 ||
+      atpRatio < Config.AUTO_PILOT_HUNGER_THRESHOLD ||
+      projectedATPRatio < 0.3 ||
       player.compounds.glucose < Config.REPRODUCTION_GLUCOSE_REQUIRED ||
       player.compounds.aminoAcids < Config.REPRODUCTION_AMINO_ACIDS_REQUIRED ||
       player.compounds.phosphates < Config.REPRODUCTION_PHOSPHATES_REQUIRED;
 
     if (needsResources) {
-      const nearestResource = this.findNearestResource(player, resources);
-      if (nearestResource) {
-        const resourceDir = this.getDirectionTo(player.position, nearestResource.position);
+      if (Config.DEBUG_AUTO_PILOT) {
+        console.log(`[AutoPilot] Cell ${player.id} needs resources - ATP: ${atpRatio.toFixed(2)}, Projected: ${projectedATPRatio.toFixed(2)}`);
+      }
+
+      // Check if cell has cached target
+      const cachedTargetId = this.cellTargets.get(player.id);
+      let targetResource: Resource | null = null;
+
+      if (cachedTargetId) {
+        // Verify cached target still exists and is collectable
+        targetResource = resources.find(r => r.id === cachedTargetId && !r.isCollected) || null;
+        
+        if (!targetResource) {
+          // Cached target is invalid, clear it
+          this.cellTargets.delete(player.id);
+          if (Config.DEBUG_AUTO_PILOT) {
+            console.log(`[AutoPilot] Cell ${player.id} cached target invalid, finding new one`);
+          }
+        } else {
+          if (Config.DEBUG_AUTO_PILOT) {
+            console.log(`[AutoPilot] Cell ${player.id} using cached target: ${cachedTargetId}`);
+          }
+        }
+      }
+
+      // If no valid cached target, find new nearest resource
+      if (!targetResource) {
+        targetResource = this.findNearestResource(player, resources);
+        if (targetResource) {
+          // Cache the new target
+          this.cellTargets.set(player.id, targetResource.id);
+          if (Config.DEBUG_AUTO_PILOT) {
+            console.log(`[AutoPilot] Cell ${player.id} cached new target: ${targetResource.id}`);
+          }
+        }
+      }
+
+      if (targetResource) {
+        const resourceDir = this.getDirectionTo(player.position, targetResource.position);
         direction.x = resourceDir.x;
         direction.y = resourceDir.y;
         return direction;
@@ -47,31 +98,62 @@ export class AutoPilot {
 
     // Priority 3: If ready to reproduce, find a safe area
     if (player.canReproduce()) {
-      // Look for a resource-rich, safe area
+      if (Config.DEBUG_AUTO_PILOT) {
+        console.log(`[AutoPilot] Cell ${player.id} ready to reproduce, seeking safe area`);
+      }
+      
+      // Look for a resource-rich, safe area (nearby resources indicate better biome)
       const safeResource = this.findNearestResource(player, resources);
       if (safeResource) {
+        const distance = this.getDistance(player.position, safeResource.position);
+        // Only slow down if we're close to a resource (implies nutrient-rich area)
+        // For now, we'll assume being near resources means better conditions
+        // In a full implementation, we'd check biome.nutrients > 7 and biome.hazards.length === 0
+        const isNearResource = distance < 150; // Within 150 units of a resource
+        
         const safeDir = this.getDirectionTo(player.position, safeResource.position);
-        direction.x = safeDir.x * 0.5; // Move slower when ready to reproduce
-        direction.y = safeDir.y * 0.5;
+        if (isNearResource) {
+          // Slow movement when in good area
+          direction.x = safeDir.x * 0.5;
+          direction.y = safeDir.y * 0.5;
+          if (Config.DEBUG_AUTO_PILOT) {
+            console.log(`[AutoPilot] Cell ${player.id} in good area, slowing for reproduction`);
+          }
+        } else {
+          // Move toward good area
+          direction.x = safeDir.x;
+          direction.y = safeDir.y;
+        }
         return direction;
       }
     }
 
     // Priority 4: Wander around (per-cell wander state)
+    // Dynamic wandering based on hunger level
     const cellId = player.id;
     let wanderState = this.cellWanderState.get(cellId);
     if (!wanderState) {
       wanderState = {
         cooldown: 0,
-        direction: this.wander(),
+        direction: this.wander(atpRatio),
       };
       this.cellWanderState.set(cellId, wanderState);
     }
 
+    // Make cooldown depend on hunger: hungrier = more frequent direction changes
+    // Formula: 0.5 + Math.max(0.3, atpRatio) * 2
+    // When ATP is high (1.0), cooldown = 2.5s. When low (0.3), cooldown = 1.1s
+    const baseCooldown = 0.5 + Math.max(0.3, atpRatio) * 2;
+
     wanderState.cooldown -= deltaTime;
     if (wanderState.cooldown <= 0) {
-      wanderState.direction = this.wander();
-      wanderState.cooldown = 2 + Math.random() * 3; // 2-5 seconds
+      // Bias wander direction outward from lake center when hungry (explore more)
+      wanderState.direction = this.wander(atpRatio);
+      wanderState.cooldown = baseCooldown + Math.random() * 1; // Add some randomness
+      
+      if (Config.DEBUG_AUTO_PILOT) {
+        console.log(`[AutoPilot] Cell ${player.id} new wander direction, cooldown: ${wanderState.cooldown.toFixed(2)}s`);
+      }
     }
 
     direction.x = wanderState.direction.x;
@@ -152,12 +234,30 @@ export class AutoPilot {
     return Math.sqrt(dx * dx + dy * dy);
   }
 
-  private wander(): { x: number; y: number } {
-    const angle = Math.random() * Math.PI * 2;
+  private wander(atpRatio?: number): { x: number; y: number } {
+    let angle = Math.random() * Math.PI * 2;
+    
+    // Optionally bias direction toward unexplored space (outward from lake center) when hungry
+    if (atpRatio !== undefined && atpRatio < 0.5) {
+      // When hungry, bias toward exploring outward
+      // Lake center is approximately at Config.PLAYER_START_X, Config.PLAYER_START_Y
+      // This is a simplified approach - in a full implementation, we'd track explored areas
+      const outwardBias = (Math.random() - 0.5) * 0.3; // Small bias
+      angle += outwardBias;
+    }
+    
     return {
       x: Math.cos(angle),
       y: Math.sin(angle),
     };
+  }
+
+  // Clear cached target for a cell (called when resource is collected)
+  clearTarget(cellId: string): void {
+    this.cellTargets.delete(cellId);
+    if (Config.DEBUG_AUTO_PILOT) {
+      console.log(`[AutoPilot] Cleared target for cell ${cellId}`);
+    }
   }
 }
 

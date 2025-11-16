@@ -25,6 +25,11 @@ export const Config = {
   ATP_DRAIN_MULTIPLIER_SIZE: 0.005, // Reduced from 0.01 - size penalty halved
   ATP_FROM_GLUCOSE: 40, // Increased from 25 - more rewarding to collect glucose
 
+  // Auto-pilot settings
+  AUTO_PILOT_HUNGER_THRESHOLD: 0.9, // Start seeking food at 90% ATP
+  AUTO_PILOT_STARVATION_WINDOW_SECONDS: 5, // Project ATP 5 seconds ahead
+  DEBUG_AUTO_PILOT: false, // Enable debug logging for auto-pilot
+
   // Resource settings
   GLUCOSE_COUNT: 40, // Increased from 30 - more resources available
   GLUCOSE_RADIUS: 8,

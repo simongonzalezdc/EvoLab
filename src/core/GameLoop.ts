@@ -86,8 +86,33 @@ export class GameLoop {
     // Setup UI callbacks
     this.setupUICallbacks();
 
+    // Setup zoom controls
+    this.setupZoomControls();
+
     // Load saved settings
     this.loadSettings();
+  }
+
+  private setupZoomControls(): void {
+    // Mouse wheel zoom
+    this.inputHandler.onZoom((delta) => {
+      const currentZoom = this.renderer.getZoom();
+      const newZoom = currentZoom + delta;
+      this.renderer.setZoom(newZoom);
+    });
+
+    // Keyboard zoom
+    this.inputHandler.onZoomIn(() => {
+      this.renderer.zoomIn();
+    });
+
+    this.inputHandler.onZoomOut(() => {
+      this.renderer.zoomOut();
+    });
+
+    this.inputHandler.onResetZoom(() => {
+      this.renderer.resetZoom();
+    });
   }
 
   private setupUICallbacks(): void {
@@ -178,6 +203,23 @@ export class GameLoop {
     this.uiController.setAutoModeStateCallback(() => {
       return this.autoMode;
     });
+
+    // Setup zoom callbacks
+    this.uiController.setZoomCallbacks(
+      () => this.renderer.getZoom(),
+      () => this.renderer.zoomIn(),
+      () => this.renderer.zoomOut(),
+      () => this.renderer.resetZoom()
+    );
+
+    // Setup music manager callback
+    this.uiController.setMusicManagerCallback(() => this.musicManager);
+
+    // Setup music preset hotkeys
+    window.addEventListener('musicPresetChange', ((e: CustomEvent<number>) => {
+      const presetIndex = e.detail;
+      this.musicManager.applyPreset(presetIndex);
+    }) as EventListener);
   }
 
   // Toggle auto-pilot mode

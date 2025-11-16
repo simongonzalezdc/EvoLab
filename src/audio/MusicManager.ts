@@ -11,6 +11,22 @@ export interface MusicState {
   generation: number;
 }
 
+export interface MusicPreset {
+  name: string;
+  oscillatorType: 'sine' | 'square' | 'sawtooth' | 'triangle';
+  envelope: {
+    attack: number;
+    decay: number;
+    sustain: number;
+    release: number;
+  };
+  scale: string[];
+  filterFreq: number;
+  reverbWet: number;
+  delayFeedback: number;
+  bpm: number;
+}
+
 export class MusicManager {
   private isEnabled = false;
   private isInitialized = false;
@@ -22,10 +38,19 @@ export class MusicManager {
   private melodySynth: Tone.Synth;
   private padSynth: Tone.PolySynth;
 
+  // Per-synth channels for effects
+  private ambientChannel: Tone.Channel;
+  private bassChannel: Tone.Channel;
+  private melodyChannel: Tone.Channel;
+  private padChannel: Tone.Channel;
+
   // Effects
   private reverb: Tone.Reverb;
   private filter: Tone.Filter;
   private delay: Tone.FeedbackDelay;
+
+  // Presets
+  private presets: MusicPreset[] = [];
 
   // Sequencers
   private ambientLoop: Tone.Loop | null = null;
@@ -62,6 +87,12 @@ export class MusicManager {
       feedback: 0.3,
       wet: 0.2,
     });
+
+    // Create per-synth channels
+    this.ambientChannel = new Tone.Channel({ volume: 0 }).toDestination();
+    this.bassChannel = new Tone.Channel({ volume: 0 }).toDestination();
+    this.melodyChannel = new Tone.Channel({ volume: 0 }).toDestination();
+    this.padChannel = new Tone.Channel({ volume: 0 }).toDestination();
 
     // Create synths
     this.ambientSynth = new Tone.PolySynth(Tone.Synth, {
@@ -104,25 +135,94 @@ export class MusicManager {
       },
     });
 
+    // Initialize presets
+    this.initializePresets();
+
     // Connect audio graph
     this.setupAudioGraph();
   }
 
+  private initializePresets(): void {
+    this.presets = [
+      {
+        name: 'Default',
+        oscillatorType: 'sine',
+        envelope: { attack: 2, decay: 1, sustain: 0.8, release: 3 },
+        scale: ['C3', 'E3', 'G3', 'B3', 'D4', 'F#4'],
+        filterFreq: 2000,
+        reverbWet: 0.4,
+        delayFeedback: 0.3,
+        bpm: 120,
+      },
+      {
+        name: 'Bright & Energetic',
+        oscillatorType: 'sawtooth',
+        envelope: { attack: 0.1, decay: 0.5, sustain: 0.7, release: 1.5 },
+        scale: ['C3', 'D3', 'E3', 'G3', 'A3', 'C4', 'D4'],
+        filterFreq: 3000,
+        reverbWet: 0.2,
+        delayFeedback: 0.1,
+        bpm: 140,
+      },
+      {
+        name: 'Dark & Ambient',
+        oscillatorType: 'triangle',
+        envelope: { attack: 3, decay: 2, sustain: 0.6, release: 5 },
+        scale: ['C3', 'Eb3', 'F3', 'Ab3', 'C4'],
+        filterFreq: 1000,
+        reverbWet: 0.7,
+        delayFeedback: 0.5,
+        bpm: 80,
+      },
+      {
+        name: 'Crystalline',
+        oscillatorType: 'sine',
+        envelope: { attack: 1, decay: 0.8, sustain: 0.9, release: 2 },
+        scale: ['C3', 'E3', 'F#3', 'G#3', 'B3', 'C4', 'E4'],
+        filterFreq: 4000,
+        reverbWet: 0.5,
+        delayFeedback: 0.2,
+        bpm: 100,
+      },
+      {
+        name: 'Deep & Mysterious',
+        oscillatorType: 'sine',
+        envelope: { attack: 4, decay: 3, sustain: 0.5, release: 6 },
+        scale: ['C2', 'Db2', 'Eb2', 'Gb2', 'Ab2', 'C3'],
+        filterFreq: 800,
+        reverbWet: 0.8,
+        delayFeedback: 0.4,
+        bpm: 60,
+      },
+    ];
+  }
+
   private setupAudioGraph(): void {
-    // Ambient synth -> reverb -> filter -> master
-    this.ambientSynth.connect(this.reverb);
+    // Connect synths through channels for per-layer effects
+    // Ambient synth -> channel -> reverb -> filter -> master
+    this.ambientSynth.connect(this.ambientChannel);
+    this.ambientChannel.connect(this.reverb);
     this.reverb.connect(this.filter);
     this.filter.connect(this.masterVolume);
 
-    // Bass drone -> master (dry, deep)
-    this.bassDrone.connect(this.masterVolume);
+    // Bass drone -> channel -> master (dry, deep)
+    this.bassDrone.connect(this.bassChannel);
+    this.bassChannel.connect(this.masterVolume);
 
-    // Melody -> delay -> reverb -> master
-    this.melodySynth.connect(this.delay);
+    // Melody -> channel -> delay -> reverb -> master
+    this.melodySynth.connect(this.melodyChannel);
+    this.melodyChannel.connect(this.delay);
     this.delay.connect(this.reverb);
 
-    // Pad -> reverb -> master
-    this.padSynth.connect(this.reverb);
+    // Pad -> channel -> reverb -> master
+    this.padSynth.connect(this.padChannel);
+    this.padChannel.connect(this.reverb);
+    
+    // Set initial channel volumes (not muted)
+    this.ambientChannel.volume.value = 0;
+    this.bassChannel.volume.value = 0;
+    this.melodyChannel.volume.value = 0;
+    this.padChannel.volume.value = 0;
   }
 
   async initialize(): Promise<void> {
@@ -407,6 +507,66 @@ export class MusicManager {
     return `${4 * dayMod * combatMod}n` as Tone.Unit.Time;
   }
 
+  // Dev tools methods
+  setFilterFrequency(freq: number): void {
+    this.filter.frequency.rampTo(freq, 0.1);
+  }
+
+  setReverbWet(wet: number): void {
+    this.reverb.wet.rampTo(wet, 0.1);
+  }
+
+  setDelayFeedback(feedback: number): void {
+    this.delay.feedback.rampTo(feedback, 0.1);
+  }
+
+  setBPM(bpm: number): void {
+    Tone.Transport.bpm.rampTo(bpm, 0.5);
+  }
+
+  setLayerMute(layer: 'ambient' | 'bass' | 'melody' | 'pad', muted: boolean): void {
+    const channel = this.getChannelForLayer(layer);
+    if (channel) {
+      channel.volume.rampTo(muted ? -Infinity : 0, 0.1);
+    }
+  }
+
+  private getChannelForLayer(layer: 'ambient' | 'bass' | 'melody' | 'pad'): Tone.Channel | null {
+    switch (layer) {
+      case 'ambient':
+        return this.ambientChannel;
+      case 'bass':
+        return this.bassChannel;
+      case 'melody':
+        return this.melodyChannel;
+      case 'pad':
+        return this.padChannel;
+      default:
+        return null;
+    }
+  }
+
+  getPresets(): MusicPreset[] {
+    return this.presets;
+  }
+
+  applyPreset(presetIndex: number): void {
+    if (presetIndex < 0 || presetIndex >= this.presets.length) return;
+
+    const preset = this.presets[presetIndex];
+    if (!preset) return;
+    
+    // Apply preset settings
+    this.setBPM(preset.bpm);
+    this.setFilterFrequency(preset.filterFreq);
+    this.setReverbWet(preset.reverbWet);
+    this.setDelayFeedback(preset.delayFeedback);
+
+    // Update synth oscillators (requires recreating synths)
+    // For now, we'll just update the parameters we can change dynamically
+    // Full oscillator type changes would require synth recreation
+  }
+
   dispose(): void {
     this.stopMusic();
 
@@ -415,6 +575,10 @@ export class MusicManager {
     this.bassDrone.dispose();
     this.melodySynth.dispose();
     this.padSynth.dispose();
+    this.ambientChannel.dispose();
+    this.bassChannel.dispose();
+    this.melodyChannel.dispose();
+    this.padChannel.dispose();
     this.reverb.dispose();
     this.filter.dispose();
     this.delay.dispose();
