@@ -14,6 +14,7 @@ export class PixiApp {
   private uiContainer: Container; // Container for UI elements (not affected by world transforms)
   private biomeLayer: Container | null = null;
   private particleLayer: Container;
+  private mapBoundary: Graphics | null = null;
   private isInitialized = false;
   private zoomLevel: number = 1.0;
   private minZoom: number = 0.5;
@@ -94,11 +95,12 @@ export class PixiApp {
     const halfWidth = Config.LAKE_WIDTH / 2;
     const halfHeight = Config.LAKE_HEIGHT / 2;
 
-    this.mapBoundary = new Graphics();
+    const mapBoundary = new Graphics();
+    this.mapBoundary = mapBoundary;
 
     // Draw boundary rectangle with semi-transparent border
-    this.mapBoundary.rect(-halfWidth, -halfHeight, Config.LAKE_WIDTH, Config.LAKE_HEIGHT);
-    this.mapBoundary.stroke({
+    mapBoundary.rect(-halfWidth, -halfHeight, Config.LAKE_WIDTH, Config.LAKE_HEIGHT);
+    mapBoundary.stroke({
       width: 4,
       color: 0x4CAF50,
       alpha: 0.5
@@ -108,23 +110,23 @@ export class PixiApp {
     const fadeWidth = 100;
 
     // Left edge fade
-    this.mapBoundary.rect(-halfWidth, -halfHeight, fadeWidth, Config.LAKE_HEIGHT);
-    this.mapBoundary.fill({ color: 0x0a0e27, alpha: 0.3 });
+    mapBoundary.rect(-halfWidth, -halfHeight, fadeWidth, Config.LAKE_HEIGHT);
+    mapBoundary.fill({ color: 0x0a0e27, alpha: 0.3 });
 
     // Right edge fade
-    this.mapBoundary.rect(halfWidth - fadeWidth, -halfHeight, fadeWidth, Config.LAKE_HEIGHT);
-    this.mapBoundary.fill({ color: 0x0a0e27, alpha: 0.3 });
+    mapBoundary.rect(halfWidth - fadeWidth, -halfHeight, fadeWidth, Config.LAKE_HEIGHT);
+    mapBoundary.fill({ color: 0x0a0e27, alpha: 0.3 });
 
     // Top edge fade
-    this.mapBoundary.rect(-halfWidth, -halfHeight, Config.LAKE_WIDTH, fadeWidth);
-    this.mapBoundary.fill({ color: 0x0a0e27, alpha: 0.3 });
+    mapBoundary.rect(-halfWidth, -halfHeight, Config.LAKE_WIDTH, fadeWidth);
+    mapBoundary.fill({ color: 0x0a0e27, alpha: 0.3 });
 
     // Bottom edge fade
-    this.mapBoundary.rect(-halfWidth, halfHeight - fadeWidth, Config.LAKE_WIDTH, fadeWidth);
-    this.mapBoundary.fill({ color: 0x0a0e27, alpha: 0.3 });
+    mapBoundary.rect(-halfWidth, halfHeight - fadeWidth, Config.LAKE_WIDTH, fadeWidth);
+    mapBoundary.fill({ color: 0x0a0e27, alpha: 0.3 });
 
     // Add to world container (above biomes but below entities)
-    this.worldContainer.addChild(this.mapBoundary);
+    this.worldContainer.addChild(mapBoundary);
   }
 
   // Add biome layer underneath entities

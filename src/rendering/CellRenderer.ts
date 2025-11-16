@@ -98,18 +98,26 @@ export class CellRenderer {
     }
 
     // Draw filled shape
-    graphic.moveTo(points[0].x, points[0].y);
-    for (let i = 1; i < points.length; i++) {
-      graphic.lineTo(points[i].x, points[i].y);
-    }
-    graphic.fill(color);
+    if (points[0]) {
+      graphic.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) {
+        const point = points[i];
+        if (point) {
+          graphic.lineTo(point.x, point.y);
+        }
+      }
+      graphic.fill(color);
 
-    // Add outline
-    graphic.moveTo(points[0].x, points[0].y);
-    for (let i = 1; i < points.length; i++) {
-      graphic.lineTo(points[i].x, points[i].y);
+      // Add outline
+      graphic.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) {
+        const point = points[i];
+        if (point) {
+          graphic.lineTo(point.x, point.y);
+        }
+      }
+      graphic.stroke({ width: 2, color: 0xffffff, alpha: 0.4 });
     }
-    graphic.stroke({ width: 2, color: 0xffffff, alpha: 0.4 });
   }
 
   private drawCarnivoreShape(
@@ -133,16 +141,24 @@ export class CellRenderer {
     }
 
     // Draw filled shape
-    graphic.moveTo(points[0].x, points[0].y);
-    for (let i = 1; i < points.length; i++) {
-      graphic.lineTo(points[i].x, points[i].y);
-    }
-    graphic.fill(color);
+    if (points[0]) {
+      graphic.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) {
+        const point = points[i];
+        if (point) {
+          graphic.lineTo(point.x, point.y);
+        }
+      }
+      graphic.fill(color);
 
-    // Add sharp outline
-    graphic.moveTo(points[0].x, points[0].y);
-    for (let i = 1; i < points.length; i++) {
-      graphic.lineTo(points[i].x, points[i].y);
+      // Add sharp outline
+      graphic.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) {
+        const point = points[i];
+        if (point) {
+          graphic.lineTo(point.x, point.y);
+        }
+      }
     }
     graphic.stroke({ width: 2, color: 0xff0000, alpha: 0.6 });
   }
@@ -162,18 +178,26 @@ export class CellRenderer {
     }
 
     // Draw filled shape
-    graphic.moveTo(points[0].x, points[0].y);
-    for (let i = 1; i < points.length; i++) {
-      graphic.lineTo(points[i].x, points[i].y);
-    }
-    graphic.fill(color);
+    if (points[0]) {
+      graphic.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) {
+        const point = points[i];
+        if (point) {
+          graphic.lineTo(point.x, point.y);
+        }
+      }
+      graphic.fill(color);
 
-    // Add outline
-    graphic.moveTo(points[0].x, points[0].y);
-    for (let i = 1; i < points.length; i++) {
-      graphic.lineTo(points[i].x, points[i].y);
+      // Add outline
+      graphic.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) {
+        const point = points[i];
+        if (point) {
+          graphic.lineTo(point.x, point.y);
+        }
+      }
+      graphic.stroke({ width: 2, color: 0xffffff, alpha: 0.5 });
     }
-    graphic.stroke({ width: 2, color: 0xffffff, alpha: 0.5 });
   }
 
   private drawPlayerShape(
@@ -300,6 +324,7 @@ export class CellRenderer {
 
     for (let i = 0; i < this.trailPoints.length - 1; i++) {
       const point = this.trailPoints[i];
+      if (!point) continue;
       const alpha = (i / this.trailPoints.length) * 0.3;
       const width = (i / this.trailPoints.length) * 3;
 

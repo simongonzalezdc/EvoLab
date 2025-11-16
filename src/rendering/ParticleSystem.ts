@@ -25,6 +25,7 @@ export class ParticleSystem {
   update(deltaTime: number): void {
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const particle = this.particles[i];
+      if (!particle) continue;
 
       // Update position
       particle.graphic.x += particle.vx * deltaTime;
