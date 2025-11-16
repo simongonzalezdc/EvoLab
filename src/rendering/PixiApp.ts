@@ -15,8 +15,9 @@ export class PixiApp {
   private biomeLayer: Container | null = null;
   private particleLayer: Container;
   private mapBoundary: Graphics | null = null;
+  private backgroundLayer: Graphics | null = null;
   private isInitialized = false;
-  private zoomLevel: number = 1.0;
+  private zoomLevel: number = 0.5; // Default to fully zoomed out
   private minZoom: number = 0.5;
   private maxZoom: number = 3.0;
 
@@ -65,6 +66,9 @@ export class PixiApp {
     this.app.canvas.style.height = '100%';
     this.app.canvas.style.display = 'block';
 
+    // Create background layer for UI (outside map boundary)
+    this.createBackgroundLayer();
+
     // Add world container to stage
     console.log('[PixiApp] initialize: Adding worldContainer to stage');
     console.log(`[PixiApp] initialize: Stage visible: ${this.app.stage.visible}, alpha: ${this.app.stage.alpha}`);
@@ -76,18 +80,51 @@ export class PixiApp {
     // Add particle layer to world container (on top of everything)
     this.worldContainer.addChild(this.particleLayer);
 
-    // DEBUG: Start world container at (0, 0) instead of centering
-    this.worldContainer.x = 0;
-    this.worldContainer.y = 0;
-    
-    console.log(`[PixiApp] initialize: WorldContainer positioned at (${this.worldContainer.x}, ${this.worldContainer.y}) - DEBUG: Set to (0, 0)`);
-    console.log(`[PixiApp] initialize: WorldContainer visible: ${this.worldContainer.visible}, alpha: ${this.worldContainer.alpha}`);
-    console.log(`[PixiApp] initialize: Canvas size: ${width}x${height}`);
-
     // Add map boundary visualization
     this.createMapBoundary();
 
+    // Set initial zoom to fully zoomed out (default view)
+    this.worldContainer.scale.set(this.zoomLevel, this.zoomLevel);
+    // Center the world when fully zoomed out
+    const screenSize = this.getScreenSize();
+    this.worldContainer.x = screenSize.width / 2;
+    this.worldContainer.y = screenSize.height / 2;
+    
+    console.log(`[PixiApp] initialize: WorldContainer positioned at (${this.worldContainer.x}, ${this.worldContainer.y}) - Centered for fully zoomed out view`);
+    console.log(`[PixiApp] initialize: WorldContainer visible: ${this.worldContainer.visible}, alpha: ${this.worldContainer.alpha}`);
+    console.log(`[PixiApp] initialize: Canvas size: ${screenSize.width}x${screenSize.height}, zoom: ${this.zoomLevel}`);
+
     this.isInitialized = true;
+  }
+
+  // Create background layer that covers everything outside the map boundary
+  // This serves as the UI background - only the game space (inside green rectangle) has tiles
+  private createBackgroundLayer(): void {
+    const background = new Graphics();
+    this.backgroundLayer = background;
+
+    // Get screen size
+    const { width, height } = this.getScreenSize();
+
+    // Fill entire screen with background color (can be styled for UI)
+    // Since biome tiles only render inside the map boundary, this background
+    // will show through everywhere outside the green rectangle
+    background.rect(0, 0, width, height);
+    background.fill({ color: Config.BACKGROUND_COLOR, alpha: 1.0 });
+
+    // Add to stage at the bottom (behind everything)
+    // This background is static and always covers the full screen
+    this.app.stage.addChildAt(background, 0);
+  }
+
+  // Update background layer when screen resizes
+  private updateBackgroundLayer(): void {
+    if (!this.backgroundLayer) return;
+
+    this.backgroundLayer.clear();
+    const { width, height } = this.getScreenSize();
+    this.backgroundLayer.rect(0, 0, width, height);
+    this.backgroundLayer.fill({ color: Config.BACKGROUND_COLOR, alpha: 1.0 });
   }
 
   // Create visual boundary for the map
@@ -148,6 +185,15 @@ export class PixiApp {
 
   // Update camera to follow target position
   updateCamera(targetX: number, targetY: number): void {
+    // Don't move camera when fully zoomed out (at minimum zoom)
+    if (this.zoomLevel <= this.minZoom) {
+      // Center the world at (0, 0) when fully zoomed out
+      const { width, height } = this.getScreenSize();
+      this.worldContainer.x = width / 2;
+      this.worldContainer.y = height / 2;
+      return;
+    }
+
     // Camera follows player - use actual canvas size
     // Account for zoom level in camera positioning
     const { width, height } = this.getScreenSize();
@@ -204,7 +250,7 @@ export class PixiApp {
   }
 
   resetZoom(): void {
-    this.setZoom(1.0);
+    this.setZoom(this.minZoom); // Reset to fully zoomed out view
   }
 
   // Create a circular sprite (for cells)
@@ -265,6 +311,10 @@ export class PixiApp {
     this.particleSystem.dispose();
     if (this.miniMap) {
       this.miniMap.dispose();
+    }
+    if (this.backgroundLayer) {
+      this.backgroundLayer.destroy();
+      this.backgroundLayer = null;
     }
     this.app.destroy(true, { children: true });
     this.isInitialized = false;

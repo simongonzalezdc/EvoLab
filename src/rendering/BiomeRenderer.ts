@@ -39,6 +39,14 @@ export class BiomeRenderer {
       console.log(`[BiomeRenderer] Render camera (${cameraX}, ${cameraY}) view ${viewWidth}x${viewHeight}`);
     }
     
+    // Map boundary limits - only render tiles within the game space
+    const halfWidth = Config.LAKE_WIDTH / 2;
+    const halfHeight = Config.LAKE_HEIGHT / 2;
+    const minX = -halfWidth;
+    const maxX = halfWidth;
+    const minY = -halfHeight;
+    const maxY = halfHeight;
+    
     // Calculate visible tile range
     const startX = Math.floor((cameraX - viewWidth / 2) / this.tileSize) * this.tileSize;
     const endX = Math.ceil((cameraX + viewWidth / 2) / this.tileSize) * this.tileSize;
@@ -51,6 +59,11 @@ export class BiomeRenderer {
 
     for (let x = startX; x <= endX; x += this.tileSize) {
       for (let y = startY; y <= endY; y += this.tileSize) {
+        // Only create tiles within the map boundary
+        if (x < minX || x >= maxX || y < minY || y >= maxY) {
+          continue;
+        }
+        
         const key = `${x},${y}`;
         visibleKeys.add(key);
 
