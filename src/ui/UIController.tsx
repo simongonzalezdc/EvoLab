@@ -27,6 +27,8 @@ import type { PopulationDataPoint, LineageNode } from '../data/HistoryTracker';
 import type { Achievement, Challenge } from '../achievements/AchievementSystem';
 import { Config } from '../core/Config';
 import type { GameSetupOptions, SpeciesSetupOption } from '../types/game';
+import { accessibilityManager } from '../utils/AccessibilityManager';
+import { screenReaderAnnouncer } from '../utils/ScreenReaderAnnouncer';
 
 const createSpeciesSetup = (type: SpeciesSetupOption['type'], population: number): SpeciesSetupOption => ({
   id: `${type}-${Math.random().toString(36).slice(2)}`,
@@ -190,6 +192,12 @@ export class UIController {
         this.saveSystem.loadSettings().then(settings => {
           if (settings) {
             setState(s => ({ ...s, settings }));
+            // Apply accessibility settings
+            accessibilityManager.applySettings(settings);
+          } else {
+            // Apply default accessibility settings
+            const defaultSettings = this.saveSystem.getDefaultSettings();
+            accessibilityManager.applySettings(defaultSettings);
           }
         });
 
@@ -278,6 +286,8 @@ export class UIController {
         setState(s => ({ ...s, settings }));
         this.saveSystem.saveSettings(settings);
         this.onSettingsChange?.(settings);
+        // Apply accessibility settings immediately
+        accessibilityManager.applySettings(settings);
       };
 
       const handleExportHistory = () => {
@@ -516,6 +526,11 @@ export class UIController {
       showTraitEditor: false,
       ...data,
     }));
+
+    // Announce to screen readers
+    screenReaderAnnouncer.announcePolite(
+      `Generation ${data.generation - 1} complete! Earned ${data.dnaPointsEarned} DNA points. ${data.mutations.length} mutations discovered.`
+    );
   }
 
   showTraitEditor(traits: Traits, generation: number, availableDNA: number) {
@@ -527,6 +542,11 @@ export class UIController {
       generation,
       availableDNA,
     }));
+
+    // Announce to screen readers
+    screenReaderAnnouncer.announcePolite(
+      `Trait editor opened. Generation ${generation}. You have ${availableDNA} DNA points available.`
+    );
   }
 
   hideTraitEditor() {
@@ -592,6 +612,12 @@ export class UIController {
       resourcesCollected,
       deathCause: cause,
     }));
+
+    // Announce to screen readers (assertive for critical event)
+    const causeText = cause === 'atp' ? 'energy depletion' : 'health loss';
+    screenReaderAnnouncer.announceAssertive(
+      `Extinction! Your species died from ${causeText}. Generation ${generation} reached. Survival time: ${survivalTime} seconds.`
+    );
   }
 
   setRestartCallback(callback: () => void) {
@@ -616,6 +642,11 @@ export class UIController {
       ...s,
       achievementNotifications: [...s.achievementNotifications, achievement],
     }));
+
+    // Announce to screen readers
+    screenReaderAnnouncer.announcePolite(
+      `Achievement unlocked: ${achievement.name}! ${achievement.description}`
+    );
   }
 
   // Evolution systems callbacks

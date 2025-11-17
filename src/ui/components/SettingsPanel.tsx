@@ -282,6 +282,82 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </p>
         </div>
 
+        {/* Accessibility Settings */}
+        <div style={{ marginBottom: '20px' }}>
+          <h3 style={{ color: '#fff', fontSize: '18px', marginBottom: '10px' }}>♿ Accessibility</h3>
+
+          <label style={{ display: 'flex', alignItems: 'center', color: '#fff', marginBottom: '8px' }}>
+            <input
+              type="checkbox"
+              checked={localSettings.highContrastMode ?? false}
+              onChange={e => handleChange('highContrastMode', e.target.checked)}
+              style={{ marginRight: '8px' }}
+              aria-describedby="high-contrast-desc"
+            />
+            High Contrast Mode
+          </label>
+          <p id="high-contrast-desc" style={{ color: '#888', fontSize: '12px', margin: '4px 0 0 24px' }}>
+            Increases color contrast for better visibility
+          </p>
+
+          <label style={{ display: 'flex', alignItems: 'center', color: '#fff', marginBottom: '8px', marginTop: '12px' }}>
+            <input
+              type="checkbox"
+              checked={localSettings.reduceMotion ?? false}
+              onChange={e => handleChange('reduceMotion', e.target.checked)}
+              style={{ marginRight: '8px' }}
+              aria-describedby="reduce-motion-desc"
+            />
+            Reduce Motion
+          </label>
+          <p id="reduce-motion-desc" style={{ color: '#888', fontSize: '12px', margin: '4px 0 0 24px' }}>
+            Minimizes animations and transitions
+          </p>
+
+          <div style={{ marginTop: '12px' }}>
+            <label htmlFor="font-size-select" style={{ display: 'block', color: '#fff', marginBottom: '8px' }}>
+              Font Size
+            </label>
+            <select
+              id="font-size-select"
+              value={localSettings.fontSize ?? 'medium'}
+              onChange={e => handleChange('fontSize', e.target.value as any)}
+              style={{
+                width: '100%',
+                padding: '8px',
+                background: '#333',
+                color: '#fff',
+                border: '1px solid #555',
+                borderRadius: '6px',
+                fontSize: '14px',
+              }}
+              aria-describedby="font-size-desc"
+            >
+              <option value="small">Small</option>
+              <option value="medium">Medium (Default)</option>
+              <option value="large">Large</option>
+              <option value="xlarge">Extra Large</option>
+            </select>
+            <p id="font-size-desc" style={{ color: '#888', fontSize: '12px', margin: '4px 0 0 0' }}>
+              Adjusts text size throughout the game
+            </p>
+          </div>
+
+          <label style={{ display: 'flex', alignItems: 'center', color: '#fff', marginBottom: '8px', marginTop: '12px' }}>
+            <input
+              type="checkbox"
+              checked={localSettings.screenReaderAnnouncements ?? true}
+              onChange={e => handleChange('screenReaderAnnouncements', e.target.checked)}
+              style={{ marginRight: '8px' }}
+              aria-describedby="sr-announcements-desc"
+            />
+            Screen Reader Announcements
+          </label>
+          <p id="sr-announcements-desc" style={{ color: '#888', fontSize: '12px', margin: '4px 0 0 24px' }}>
+            Announces important game events for screen readers
+          </p>
+        </div>
+
         {/* Developer Tools */}
         {onShowMusicDevTools && (
           <div style={{ marginBottom: '20px', padding: '15px', background: '#2a2a2a', borderRadius: '6px' }}>

@@ -44,6 +44,11 @@ export interface GameSettings {
   beneficialBias: number; // 0-1 (0-100%)
   // Event settings
   randomEventsEnabled: boolean;
+  // Accessibility settings
+  highContrastMode: boolean;
+  reduceMotion: boolean;
+  fontSize: 'small' | 'medium' | 'large' | 'xlarge';
+  screenReaderAnnouncements: boolean;
 }
 
 class EvoLabDatabase extends Dexie {
@@ -211,6 +216,11 @@ export class SaveSystem {
       beneficialBias: 0.1, // 10%
       // Event settings
       randomEventsEnabled: true,
+      // Accessibility settings
+      highContrastMode: false,
+      reduceMotion: false,
+      fontSize: 'medium',
+      screenReaderAnnouncements: true,
     };
   }
 
