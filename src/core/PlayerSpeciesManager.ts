@@ -9,6 +9,7 @@ import { BiomeGenerator } from '../environment/BiomeGenerator';
 import { Config } from './Config';
 import { AutoPilot } from './AutoPilot';
 import type { Traits } from '../types/entities';
+import { logger } from '../utils/Logger';
 
 export interface SpeciesStats {
   population: number;
@@ -72,8 +73,8 @@ export class PlayerSpeciesManager {
       cell.sprite.y = cell.position.y;
 
       if (Config.DEBUG_PLAYER_SPECIES) {
-        console.log(`[PlayerSpeciesManager] Created cell ${i} at (${x}, ${y}), sprite at (${sprite.x}, ${sprite.y}), radius: ${radius}, color: 0x${genome.traits.color.toString(16)}`);
-        console.log(`[PlayerSpeciesManager] Cell sprite visible: ${sprite.visible}, alpha: ${sprite.alpha}, parent: ${sprite.parent ? 'has parent' : 'no parent'}`);
+        logger.log(`[PlayerSpeciesManager] Created cell ${i} at (${x}, ${y}), sprite at (${sprite.x}, ${sprite.y}), radius: ${radius}, color: 0x${genome.traits.color.toString(16)}`);
+        logger.log(`[PlayerSpeciesManager] Cell sprite visible: ${sprite.visible}, alpha: ${sprite.alpha}, parent: ${sprite.parent ? 'has parent' : 'no parent'}`);
       }
 
       this.cells.push(cell);

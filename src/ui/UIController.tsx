@@ -1,27 +1,32 @@
 // UI Controller for managing React UI state
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
-import { TraitEditor } from './components/TraitEditor';
-import { GenerationReport } from './components/GenerationReport';
+import { ErrorBoundary } from './components/ErrorBoundary';
+
+// Core components - load immediately (used frequently)
 import { StatsPanel } from './components/StatsPanel';
 import { TimeControlPanel } from './components/TimeControlPanel';
-import { SettingsPanel } from './components/SettingsPanel';
-import { SaveLoadPanel } from './components/SaveLoadPanel';
-import { TutorialPanel } from './components/TutorialPanel';
 import { MainMenu } from './components/MainMenu';
-import { DeathScreen } from './components/DeathScreen';
-import { AchievementsPanel } from './components/AchievementsPanel';
 import { AchievementNotification } from './components/AchievementNotification';
 import { EventNotification } from './components/EventNotification';
-import { EvolutionControlPanel } from './components/EvolutionControlPanel';
-import { PhylogeneticTreePanel } from './components/PhylogeneticTreePanel';
 import { BiomeLegend } from './components/BiomeLegend';
 import { ZoomControls } from './components/ZoomControls';
-import { MusicDevTools } from './components/MusicDevTools';
-import { GameSetupPanel } from './components/GameSetupPanel';
-import { KeyboardShortcutsPanel } from './components/KeyboardShortcutsPanel';
+import { EvolutionControlPanel } from './components/EvolutionControlPanel';
 import { AccessibleGameStatePanel, type GameStateData } from './components/AccessibleGameStatePanel';
+
+// Heavy components - lazy load (only when needed)
+const TraitEditor = lazy(() => import('./components/TraitEditor').then(m => ({ default: m.TraitEditor })));
+const GenerationReport = lazy(() => import('./components/GenerationReport').then(m => ({ default: m.GenerationReport })));
+const SettingsPanel = lazy(() => import('./components/SettingsPanel').then(m => ({ default: m.SettingsPanel })));
+const SaveLoadPanel = lazy(() => import('./components/SaveLoadPanel').then(m => ({ default: m.SaveLoadPanel })));
+const TutorialPanel = lazy(() => import('./components/TutorialPanel').then(m => ({ default: m.TutorialPanel })));
+const DeathScreen = lazy(() => import('./components/DeathScreen').then(m => ({ default: m.DeathScreen })));
+const AchievementsPanel = lazy(() => import('./components/AchievementsPanel').then(m => ({ default: m.AchievementsPanel })));
+const PhylogeneticTreePanel = lazy(() => import('./components/PhylogeneticTreePanel').then(m => ({ default: m.PhylogeneticTreePanel })));
+const MusicDevTools = lazy(() => import('./components/MusicDevTools').then(m => ({ default: m.MusicDevTools })));
+const GameSetupPanel = lazy(() => import('./components/GameSetupPanel').then(m => ({ default: m.GameSetupPanel })));
+const KeyboardShortcutsPanel = lazy(() => import('./components/KeyboardShortcutsPanel').then(m => ({ default: m.KeyboardShortcutsPanel })));
 import type { Traits, Species } from '../types/entities';
 import type { GameEvent } from '../events/EventManager';
 import type { TimeControl } from '../core/TimeControl';
@@ -32,6 +37,30 @@ import { Config } from '../core/Config';
 import type { GameSetupOptions, SpeciesSetupOption } from '../types/game';
 import { accessibilityManager } from '../utils/AccessibilityManager';
 import { screenReaderAnnouncer } from '../utils/ScreenReaderAnnouncer';
+
+// Loading fallback for lazy components
+const LoadingFallback: React.FC = () => (
+  <div style={{
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    color: '#4caf50',
+    fontSize: '18px',
+    textAlign: 'center',
+  }}>
+    <div>Loading...</div>
+  </div>
+);
+
+// Helper to wrap lazy components with Suspense and ErrorBoundary
+const LazyComponent: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <ErrorBoundary>
+    <Suspense fallback={<LoadingFallback />}>
+      {children}
+    </Suspense>
+  </ErrorBoundary>
+);
 
 const createSpeciesSetup = (type: SpeciesSetupOption['type'], population: number): SpeciesSetupOption => ({
   id: `${type}-${Math.random().toString(36).slice(2)}`,
@@ -415,19 +444,14 @@ export class UIController {
             />
           )}
 
-          {/* DNA Progress Bar HUD */}
-          <DNAProgressBar
-            currentDNA={state.currentDNA}
-            targetDNA={state.targetDNA}
-            generation={state.generation}
-          />
-
           {/* Music Dev Tools */}
           {state.showMusicDevTools && this.getMusicManager && (
-            <MusicDevTools
-              musicManager={this.getMusicManager()}
-              onClose={() => setState(s => ({ ...s, showMusicDevTools: false }))}
-            />
+            <LazyComponent>
+              <MusicDevTools
+                musicManager={this.getMusicManager()}
+                onClose={() => setState(s => ({ ...s, showMusicDevTools: false }))}
+              />
+            </LazyComponent>
           )}
 
           {/* Stats Panel */}
@@ -442,71 +466,85 @@ export class UIController {
 
           {/* Generation Report Modal */}
           {state.showGenerationReport && (
-            <GenerationReport
-              generation={state.generation}
-              survivalTime={state.survivalTime}
-              resourcesCollected={state.resourcesCollected}
-              mutations={state.mutations}
-              dnaPointsEarned={state.dnaPointsEarned}
-              onContinue={handleContinue}
-            />
+            <LazyComponent>
+              <GenerationReport
+                generation={state.generation}
+                survivalTime={state.survivalTime}
+                resourcesCollected={state.resourcesCollected}
+                mutations={state.mutations}
+                dnaPointsEarned={state.dnaPointsEarned}
+                onContinue={handleContinue}
+              />
+            </LazyComponent>
           )}
 
           {/* Trait Editor Modal */}
           {state.showTraitEditor && state.currentTraits && (
-            <TraitEditor
-              currentTraits={state.currentTraits}
-              availableDNA={state.availableDNA}
-              generation={state.generation}
-              onApply={handleApplyModifications}
-            />
+            <LazyComponent>
+              <TraitEditor
+                currentTraits={state.currentTraits}
+                availableDNA={state.availableDNA}
+                generation={state.generation}
+                onApply={handleApplyModifications}
+              />
+            </LazyComponent>
           )}
 
           {/* Game Setup Modal */}
-          <GameSetupPanel
-            isOpen={state.showGameSetup}
-            species={state.gameSetupSpecies}
-            onUpdateSpecies={handleSpeciesSlotUpdate}
-            onAddSpecies={handleAddSpeciesSlot}
-            onRemoveSpecies={handleRemoveSpeciesSlot}
-            onStart={handleStartGame}
-            onCancel={handleCancelGameSetup}
-          />
+          <LazyComponent>
+            <GameSetupPanel
+              isOpen={state.showGameSetup}
+              species={state.gameSetupSpecies}
+              onUpdateSpecies={handleSpeciesSlotUpdate}
+              onAddSpecies={handleAddSpeciesSlot}
+              onRemoveSpecies={handleRemoveSpeciesSlot}
+              onStart={handleStartGame}
+              onCancel={handleCancelGameSetup}
+            />
+          </LazyComponent>
 
           {/* Settings Modal */}
           {state.showSettings && (
-            <SettingsPanel
-              settings={state.settings}
-              onSettingsChange={handleSettingsChange}
-              onClose={() => setState(s => ({ ...s, showSettings: false }))}
-              onShowMusicDevTools={() => setState(s => ({ ...s, showMusicDevTools: true, showSettings: false }))}
-            />
+            <LazyComponent>
+              <SettingsPanel
+                settings={state.settings}
+                onSettingsChange={handleSettingsChange}
+                onClose={() => setState(s => ({ ...s, showSettings: false }))}
+                onShowMusicDevTools={() => setState(s => ({ ...s, showMusicDevTools: true, showSettings: false }))}
+              />
+            </LazyComponent>
           )}
 
           {/* Save/Load Modal */}
           {state.showSaveLoad && (
-            <SaveLoadPanel
-              saveSystem={this.saveSystem}
-              onLoad={handleLoadSimulation}
-              onLoadCreature={handleLoadCreature}
-              onClose={() => setState(s => ({ ...s, showSaveLoad: false }))}
-            />
+            <LazyComponent>
+              <SaveLoadPanel
+                saveSystem={this.saveSystem}
+                onLoad={handleLoadSimulation}
+                onLoadCreature={handleLoadCreature}
+                onClose={() => setState(s => ({ ...s, showSaveLoad: false }))}
+              />
+            </LazyComponent>
           )}
 
           {/* Tutorial Modal */}
           {state.showTutorial && (
-            <TutorialPanel onClose={() => setState(s => ({ ...s, showTutorial: false }))} />
+            <LazyComponent>
+              <TutorialPanel onClose={() => setState(s => ({ ...s, showTutorial: false }))} />
+            </LazyComponent>
           )}
 
           {/* Death Screen Modal */}
           {state.showDeathScreen && (
-            <DeathScreen
-              generation={state.generation}
-              survivalTime={state.survivalTime}
-              resourcesCollected={state.resourcesCollected}
-              cause={state.deathCause}
-              onRestart={handleRestart}
-            />
+            <LazyComponent>
+              <DeathScreen
+                generation={state.generation}
+                survivalTime={state.survivalTime}
+                resourcesCollected={state.resourcesCollected}
+                cause={state.deathCause}
+                onRestart={handleRestart}
+              />
+            </LazyComponent>
           )}
 
           {/* Achievements Panel */}

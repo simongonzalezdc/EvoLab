@@ -202,6 +202,7 @@ export const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
             </button>
           </div>
         </div>
+        </div>
       </FocusLock>
     </div>
   );

@@ -106,7 +106,7 @@ export class SaveSystem {
       const id = await this.db.simulations.add(save);
       return id;
     } catch (error) {
-      console.error('Failed to save simulation:', error);
+      logger.error('Failed to save simulation:', error);
       throw new Error(`Failed to save simulation: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -115,7 +115,7 @@ export class SaveSystem {
     try {
       return await this.db.simulations.get(id);
     } catch (error) {
-      console.error('Failed to load simulation:', error);
+      logger.error('Failed to load simulation:', error);
       throw new Error(`Failed to load simulation: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -124,7 +124,7 @@ export class SaveSystem {
     try {
       return await this.db.simulations.orderBy('timestamp').reverse().toArray();
     } catch (error) {
-      console.error('Failed to get simulations:', error);
+      logger.error('Failed to get simulations:', error);
       throw new Error(`Failed to get simulations: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -133,7 +133,7 @@ export class SaveSystem {
     try {
       await this.db.simulations.delete(id);
     } catch (error) {
-      console.error('Failed to delete simulation:', error);
+      logger.error('Failed to delete simulation:', error);
       throw new Error(`Failed to delete simulation: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -150,7 +150,7 @@ export class SaveSystem {
       const id = await this.db.creatures.add(creature);
       return id;
     } catch (error) {
-      console.error('Failed to save creature:', error);
+      logger.error('Failed to save creature:', error);
       throw new Error(`Failed to save creature: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -159,7 +159,7 @@ export class SaveSystem {
     try {
       return await this.db.creatures.get(id);
     } catch (error) {
-      console.error('Failed to load creature:', error);
+      logger.error('Failed to load creature:', error);
       throw new Error(`Failed to load creature: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -168,7 +168,7 @@ export class SaveSystem {
     try {
       return await this.db.creatures.orderBy('timestamp').reverse().toArray();
     } catch (error) {
-      console.error('Failed to get creatures:', error);
+      logger.error('Failed to get creatures:', error);
       throw new Error(`Failed to get creatures: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -177,7 +177,7 @@ export class SaveSystem {
     try {
       await this.db.creatures.delete(id);
     } catch (error) {
-      console.error('Failed to delete creature:', error);
+      logger.error('Failed to delete creature:', error);
       throw new Error(`Failed to delete creature: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -186,7 +186,7 @@ export class SaveSystem {
     try {
       await this.db.settings.put({ id: 1, data: settings });
     } catch (error) {
-      console.error('Failed to save settings:', error);
+      logger.error('Failed to save settings:', error);
       throw new Error(`Failed to save settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -200,7 +200,7 @@ export class SaveSystem {
       // Merge with defaults to handle new settings from updates
       return this.migrateSettings(result.data);
     } catch (error) {
-      console.error('Failed to load settings:', error);
+      logger.error('Failed to load settings:', error);
       throw new Error(`Failed to load settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -282,7 +282,7 @@ export class SaveSystem {
         genome,
       };
     } catch (error) {
-      console.error('Failed to import creature:', error);
+      logger.error('Failed to import creature:', error);
       return null;
     }
   }
@@ -291,7 +291,7 @@ export class SaveSystem {
     try {
       await this.db.achievements.put({ id: 1, data: achievementData });
     } catch (error) {
-      console.error('Failed to save achievements:', error);
+      logger.error('Failed to save achievements:', error);
     }
   }
 
@@ -300,7 +300,7 @@ export class SaveSystem {
       const result = await this.db.achievements.get(1);
       return result?.data;
     } catch (error) {
-      console.error('Failed to load achievements:', error);
+      logger.error('Failed to load achievements:', error);
       return undefined;
     }
   }

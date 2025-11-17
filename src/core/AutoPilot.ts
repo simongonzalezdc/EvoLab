@@ -66,7 +66,7 @@ export class AutoPilot {
 
     if (needsResources) {
       if (Config.DEBUG_AUTO_PILOT) {
-        console.log(`[AutoPilot] Cell ${player.id} needs resources - ATP: ${atpRatio.toFixed(2)}, Projected: ${projectedATPRatio.toFixed(2)}`);
+        logger.log(`[AutoPilot] Cell ${player.id} needs resources - ATP: ${atpRatio.toFixed(2)}, Projected: ${projectedATPRatio.toFixed(2)}`);
       }
 
       // Check if cell has cached target
@@ -81,11 +81,11 @@ export class AutoPilot {
           // Cached target is invalid, clear it
           this.cellTargets.delete(player.id);
           if (Config.DEBUG_AUTO_PILOT) {
-            console.log(`[AutoPilot] Cell ${player.id} cached target invalid, finding new one`);
+            logger.log(`[AutoPilot] Cell ${player.id} cached target invalid, finding new one`);
           }
         } else {
           if (Config.DEBUG_AUTO_PILOT) {
-            console.log(`[AutoPilot] Cell ${player.id} using cached target: ${cachedTargetId}`);
+            logger.log(`[AutoPilot] Cell ${player.id} using cached target: ${cachedTargetId}`);
           }
         }
       }
@@ -97,7 +97,7 @@ export class AutoPilot {
           // Cache the new target
           this.cellTargets.set(player.id, targetResource.id);
           if (Config.DEBUG_AUTO_PILOT) {
-            console.log(`[AutoPilot] Cell ${player.id} cached new target: ${targetResource.id}`);
+            logger.log(`[AutoPilot] Cell ${player.id} cached new target: ${targetResource.id}`);
           }
         }
       }
@@ -113,7 +113,7 @@ export class AutoPilot {
     // Priority 3: If ready to reproduce, find a nutrient-rich, low-hazard biome
     if (player.canReproduce()) {
       if (Config.DEBUG_AUTO_PILOT) {
-        console.log(`[AutoPilot] Cell ${player.id} ready to reproduce, seeking nutrient-rich, low-hazard biome`);
+        logger.log(`[AutoPilot] Cell ${player.id} ready to reproduce, seeking nutrient-rich, low-hazard biome`);
       }
       
       // Get current biome
@@ -129,7 +129,7 @@ export class AutoPilot {
         direction.x *= 0.5;
         direction.y *= 0.5;
         if (Config.DEBUG_AUTO_PILOT) {
-          console.log(`[AutoPilot] Cell ${player.id} in suitable biome (nutrients: ${currentBiome.nutrients}, hazards: ${currentBiome.hazards.length}), slowing for reproduction`);
+          logger.log(`[AutoPilot] Cell ${player.id} in suitable biome (nutrients: ${currentBiome.nutrients}, hazards: ${currentBiome.hazards.length}), slowing for reproduction`);
         }
         return direction;
       } else {
@@ -142,7 +142,7 @@ export class AutoPilot {
           direction.y = safeDir.y;
           
           if (Config.DEBUG_AUTO_PILOT) {
-            console.log(`[AutoPilot] Cell ${player.id} moving toward better biome (current nutrients: ${currentBiome.nutrients}, hazards: ${currentBiome.hazards.length})`);
+            logger.log(`[AutoPilot] Cell ${player.id} moving toward better biome (current nutrients: ${currentBiome.nutrients}, hazards: ${currentBiome.hazards.length})`);
           }
           return direction;
         }
@@ -173,7 +173,7 @@ export class AutoPilot {
       wanderState.cooldown = baseCooldown + Math.random() * 1; // Add some randomness
       
       if (Config.DEBUG_AUTO_PILOT) {
-        console.log(`[AutoPilot] Cell ${player.id} new wander direction, cooldown: ${wanderState.cooldown.toFixed(2)}s`);
+        logger.log(`[AutoPilot] Cell ${player.id} new wander direction, cooldown: ${wanderState.cooldown.toFixed(2)}s`);
       }
     }
 
@@ -335,7 +335,7 @@ export class AutoPilot {
   clearTarget(cellId: string): void {
     this.cellTargets.delete(cellId);
     if (Config.DEBUG_AUTO_PILOT) {
-      console.log(`[AutoPilot] Cleared target for cell ${cellId}`);
+      logger.log(`[AutoPilot] Cleared target for cell ${cellId}`);
     }
   }
 }
