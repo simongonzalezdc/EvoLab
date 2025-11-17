@@ -45,9 +45,9 @@ export class PerformanceMonitor {
       this.frameTimes.shift();
     }
 
-    // Calculate average FPS
+    // Calculate average FPS (with guard against division by zero)
     const avgFrameTime = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length;
-    this.currentFPS = Math.round(1000 / avgFrameTime);
+    this.currentFPS = avgFrameTime > 0 ? Math.round(1000 / avgFrameTime) : 60; // Default to 60 FPS on first frame
 
     // Get memory usage if available
     let memoryUsage: number | undefined;

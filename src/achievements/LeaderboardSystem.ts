@@ -87,16 +87,16 @@ export class LeaderboardSystem {
     return {
       highestGeneration: this.entries.reduce((max, e) =>
         e.generation > (max?.generation || 0) ? e : max
-      ),
+      , this.entries[0] || null),
       mostDNA: this.entries.reduce((max, e) =>
         e.dnaCollected > (max?.dnaCollected || 0) ? e : max
-      ),
+      , this.entries[0] || null),
       longestSurvival: this.entries.reduce((max, e) =>
         e.survivalTime > (max?.survivalTime || 0) ? e : max
-      ),
+      , this.entries[0] || null),
       mostResources: this.entries.reduce((max, e) =>
         e.resourcesCollected > (max?.resourcesCollected || 0) ? e : max
-      ),
+      , this.entries[0] || null),
     };
   }
 

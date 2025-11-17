@@ -365,9 +365,17 @@ export class CellRenderer {
     const coords: { x: number; y: number }[] = [];
     const irregularity = 0.15 + (camouflage / 100); // 0.15-0.25
 
+    // Use color as seed for deterministic "randomness" (prevents flickering)
+    // Simple seeded random function based on cell color
+    const seed = color;
+    const seededRandom = (index: number) => {
+      const x = Math.sin(seed * (index + 1) * 12.9898) * 43758.5453;
+      return x - Math.floor(x);
+    };
+
     for (let i = 0; i <= points; i++) {
       const angle = (Math.PI * 2 * i) / points;
-      const randomness = 1 + (Math.random() - 0.5) * irregularity;
+      const randomness = 1 + (seededRandom(i) - 0.5) * irregularity;
       const r = radius * randomness;
       coords.push({
         x: Math.cos(angle) * r,
