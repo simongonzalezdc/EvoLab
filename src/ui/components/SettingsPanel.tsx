@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import FocusLock from 'react-focus-lock';
 import type { GameSettings } from '../../data/SaveSystem';
 
 interface SettingsPanelProps {
@@ -15,6 +16,19 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onShowMusicDevTools,
 }) => {
   const [localSettings, setLocalSettings] = useState<GameSettings>(settings);
+
+  // Handle ESC key to close
+  React.useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
 
   const handleChange = <K extends keyof GameSettings>(
     key: K,
@@ -35,6 +49,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="settings-title"
       style={{
         position: 'fixed',
         top: 0,
@@ -49,20 +66,21 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       }}
       onClick={handleCancel}
     >
-      <div
-        style={{
-          background: '#1a1a1a',
-          border: '2px solid #333',
-          borderRadius: '12px',
-          padding: '30px',
-          maxWidth: '500px',
-          width: '90%',
-          maxHeight: '80vh',
-          overflowY: 'auto',
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        <h2 style={{ margin: '0 0 20px 0', color: '#fff', fontSize: '24px' }}>Settings</h2>
+      <FocusLock returnFocus>
+        <div
+          style={{
+            background: '#1a1a1a',
+            border: '2px solid #333',
+            borderRadius: '12px',
+            padding: '30px',
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflowY: 'auto',
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          <h2 id="settings-title" style={{ margin: '0 0 20px 0', color: '#fff', fontSize: '24px' }}>Settings</h2>
 
         {/* Graphics Quality */}
         <div style={{ marginBottom: '20px' }}>
@@ -321,7 +339,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             Save Settings
           </button>
         </div>
-      </div>
+        </div>
+      </FocusLock>
     </div>
   );
 };

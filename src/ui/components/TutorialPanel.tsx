@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import FocusLock from 'react-focus-lock';
 
 interface TutorialStep {
   title: string;
@@ -118,6 +119,19 @@ interface TutorialPanelProps {
 export const TutorialPanel: React.FC<TutorialPanelProps> = ({ onClose }) => {
   const [currentStep, setCurrentStep] = useState(0);
 
+  // Handle ESC key to close
+  React.useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
+
   const handleNext = () => {
     if (currentStep < tutorialSteps.length - 1) {
       setCurrentStep(currentStep + 1);
@@ -140,6 +154,9 @@ export const TutorialPanel: React.FC<TutorialPanelProps> = ({ onClose }) => {
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="tutorial-title"
       style={{
         position: 'fixed',
         top: 0,
@@ -154,17 +171,18 @@ export const TutorialPanel: React.FC<TutorialPanelProps> = ({ onClose }) => {
       }}
       onClick={onClose}
     >
-      <div
-        style={{
-          background: '#1a1a1a',
-          border: '2px solid #60a5fa',
-          borderRadius: '12px',
-          padding: '30px',
-          maxWidth: '600px',
-          width: '90%',
-        }}
-        onClick={e => e.stopPropagation()}
-      >
+      <FocusLock returnFocus>
+        <div
+          style={{
+            background: '#1a1a1a',
+            border: '2px solid #60a5fa',
+            borderRadius: '12px',
+            padding: '30px',
+            maxWidth: '600px',
+            width: '90%',
+          }}
+          onClick={e => e.stopPropagation()}
+        >
         {/* Progress Indicator */}
         <div style={{ marginBottom: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
@@ -189,7 +207,7 @@ export const TutorialPanel: React.FC<TutorialPanelProps> = ({ onClose }) => {
         </div>
 
         {/* Content */}
-        <h2 style={{ margin: '0 0 20px 0', color: '#60a5fa', fontSize: '24px' }}>{step.title}</h2>
+        <h2 id="tutorial-title" style={{ margin: '0 0 20px 0', color: '#60a5fa', fontSize: '24px' }}>{step.title}</h2>
         <div
           style={{
             color: '#ddd',
@@ -272,7 +290,8 @@ export const TutorialPanel: React.FC<TutorialPanelProps> = ({ onClose }) => {
             />
           ))}
         </div>
-      </div>
+        </div>
+      </FocusLock>
     </div>
   );
 };

@@ -1,6 +1,7 @@
 // Generation Report modal shown after reproduction
 
 import React from 'react';
+import FocusLock from 'react-focus-lock';
 
 interface GenerationReportProps {
   generation: number;
@@ -19,6 +20,19 @@ export const GenerationReport: React.FC<GenerationReportProps> = ({
   dnaPointsEarned,
   onContinue,
 }) => {
+  // Handle ESC key or Enter to continue
+  React.useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' || e.key === 'Enter') {
+        e.preventDefault();
+        onContinue();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, [onContinue]);
+
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -26,9 +40,15 @@ export const GenerationReport: React.FC<GenerationReportProps> = ({
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="generation-report">
-        <h2 className="report-title">
+    <div
+      className="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="generation-report-title"
+    >
+      <FocusLock returnFocus>
+        <div className="generation-report">
+        <h2 id="generation-report-title" className="report-title">
           🎉 Generation {generation - 1} Complete!
         </h2>
 
@@ -74,7 +94,8 @@ export const GenerationReport: React.FC<GenerationReportProps> = ({
             Continue to Next Generation →
           </button>
         </div>
-      </div>
+        </div>
+      </FocusLock>
 
       <style>{`
         .modal-overlay {

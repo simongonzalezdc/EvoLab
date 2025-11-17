@@ -1,6 +1,7 @@
 // Trait Editor UI for modifying cell traits
 
 import React, { useState } from 'react';
+import FocusLock from 'react-focus-lock';
 import type { Traits } from '../../types/entities';
 import { TraitSystem } from '../../genetics/TraitSystem';
 import { Config } from '../../core/Config';
@@ -20,6 +21,19 @@ export const TraitEditor: React.FC<TraitEditorProps> = ({
 }) => {
   const [modifications, setModifications] = useState<Partial<Traits>>({});
   const [dnaSpent, setDNASpent] = useState(0);
+
+  // Handle ESC key to skip/cancel
+  React.useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onApply({});
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onApply]);
 
   const handleTraitChange = (traitKey: keyof Traits, newValue: number) => {
     const oldValue = currentTraits[traitKey] as number;
@@ -109,15 +123,22 @@ export const TraitEditor: React.FC<TraitEditorProps> = ({
   };
 
   return (
-    <div className="trait-editor-overlay">
-      <div className="trait-editor">
-        <div className="editor-header">
-          <h2>🧬 Trait Editor - Generation {generation}</h2>
-          <div className="dna-display">
-            DNA Points: {availableDNA - dnaSpent} / {availableDNA}
-            {dnaSpent > 0 && <span className="dna-spent"> (-{dnaSpent})</span>}
+    <div
+      className="trait-editor-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="trait-editor-title"
+      aria-describedby="trait-editor-description"
+    >
+      <FocusLock returnFocus>
+        <div className="trait-editor">
+          <div className="editor-header">
+            <h2 id="trait-editor-title">🧬 Trait Editor - Generation {generation}</h2>
+            <div id="trait-editor-description" className="dna-display">
+              DNA Points: {availableDNA - dnaSpent} / {availableDNA}
+              {dnaSpent > 0 && <span className="dna-spent"> (-{dnaSpent})</span>}
+            </div>
           </div>
-        </div>
 
         <div className="editor-content">
           <div className="trait-section">
@@ -180,7 +201,8 @@ export const TraitEditor: React.FC<TraitEditorProps> = ({
             Maximum change per trait: ±2 points • Cost: 2 DNA points per unit
           </div>
         </div>
-      </div>
+      </FocusLock>
+    </div>
 
       <style>{`
         .trait-editor-overlay {

@@ -1,4 +1,5 @@
 import React from 'react';
+import FocusLock from 'react-focus-lock';
 
 interface DeathScreenProps {
   generation: number;
@@ -15,6 +16,19 @@ export const DeathScreen: React.FC<DeathScreenProps> = ({
   cause,
   onRestart,
 }) => {
+  // Handle ESC key to restart (or could disable for death screen)
+  React.useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onRestart();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onRestart]);
+
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -27,6 +41,10 @@ export const DeathScreen: React.FC<DeathScreenProps> = ({
 
   return (
     <div
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="death-screen-title"
+      aria-describedby="death-screen-cause"
       style={{
         position: 'fixed',
         top: 0,
@@ -40,7 +58,8 @@ export const DeathScreen: React.FC<DeathScreenProps> = ({
         zIndex: 2000,
       }}
     >
-      <div
+      <FocusLock returnFocus>
+        <div
         style={{
           background: 'linear-gradient(135deg, #1a1a1a 0%, #2a0a0a 100%)',
           border: '3px solid #ef4444',
@@ -56,7 +75,7 @@ export const DeathScreen: React.FC<DeathScreenProps> = ({
         <div style={{ fontSize: '72px', marginBottom: '20px' }}>💀</div>
 
         {/* Title */}
-        <h1 style={{
+        <h1 id="death-screen-title" style={{
           margin: '0 0 10px 0',
           color: '#ef4444',
           fontSize: '36px',
@@ -66,7 +85,7 @@ export const DeathScreen: React.FC<DeathScreenProps> = ({
         </h1>
 
         {/* Cause */}
-        <p style={{ margin: '0 0 30px 0', color: '#ff9999', fontSize: '18px' }}>
+        <p id="death-screen-cause" style={{ margin: '0 0 30px 0', color: '#ff9999', fontSize: '18px' }}>
           {causeMessage}
         </p>
 
@@ -149,7 +168,8 @@ export const DeathScreen: React.FC<DeathScreenProps> = ({
         }}>
           Try evolving different traits for better survival!
         </p>
-      </div>
+        </div>
+      </FocusLock>
     </div>
   );
 };

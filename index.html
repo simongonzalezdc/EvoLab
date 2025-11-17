@@ -65,11 +65,40 @@
       }
 
       #hud .stat-label {
-        color: #aaa;
+        color: #d0d0d0;
       }
 
       #hud .stat-value {
         font-weight: bold;
+      }
+
+      /* Skip link styles */
+      .skip-link {
+        position: absolute;
+        top: -40px;
+        left: 0;
+        background: #4CAF50;
+        color: #000;
+        padding: 8px 16px;
+        text-decoration: none;
+        font-weight: bold;
+        z-index: 10000;
+        border-radius: 0 0 4px 0;
+      }
+
+      .skip-link:focus {
+        top: 0;
+      }
+
+      /* Focus indicator styles */
+      *:focus-visible {
+        outline: 3px solid #4CAF50;
+        outline-offset: 2px;
+      }
+
+      button:focus-visible {
+        outline: 3px solid #4CAF50;
+        outline-offset: 2px;
       }
 
       .bar-container {
@@ -158,8 +187,12 @@
     </style>
   </head>
   <body>
+    <!-- Skip links for keyboard navigation -->
+    <a href="#main-game" class="skip-link">Skip to game</a>
+    <a href="#main-menu" class="skip-link" style="left: 140px;">Skip to menu</a>
+
     <div id="app">
-      <div id="hud">
+      <aside id="hud" aria-label="Game statistics" role="complementary">
         <h3>🧬 EvoLab</h3>
 
         <div class="stat">
@@ -206,14 +239,19 @@
         <button id="reproduce-btn" class="reproduce-button" style="display: none;">
           🧬 Reproduce!
         </button>
-      </div>
+      </aside>
 
-      <div id="instructions">
+      <main id="main-game" aria-label="Evolution simulator game canvas">
+        <!-- Game canvas will be rendered here by PixiJS -->
+      </main>
+
+      <aside id="instructions" aria-label="Game controls" role="complementary">
         <h4>Controls</h4>
         <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> - Move cell</div>
         <div><kbd>Space</kbd> - Pause</div>
+        <div><kbd>ESC</kbd> - Close menus</div>
         <div>Collect yellow glucose particles to restore ATP!</div>
-      </div>
+      </aside>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

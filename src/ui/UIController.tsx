@@ -305,7 +305,8 @@ export class UIController {
       return (
         <>
           {/* Main Menu */}
-          <MainMenu
+          <nav id="main-menu" aria-label="Main navigation">
+            <MainMenu
             onNewGame={handleNewGame}
             onLoadGame={() => setState(s => ({ ...s, showSaveLoad: true }))}
             onSettings={() => setState(s => ({ ...s, showSettings: true }))}
@@ -322,6 +323,7 @@ export class UIController {
             autoMode={this.getAutoModeState?.() || false}
             showStats={state.showStats}
           />
+          </nav>
 
           {/* Time Control Panel */}
           <TimeControlPanel timeControl={this.timeControl} />
