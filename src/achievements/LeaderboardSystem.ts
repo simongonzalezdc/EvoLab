@@ -110,7 +110,9 @@ export class LeaderboardSystem {
       date: Date.now(),
     };
 
-    const worstScore = this.calculateScore(this.entries[this.entries.length - 1]);
+    const worstEntry = this.entries[this.entries.length - 1];
+    if (!worstEntry) return true;
+    const worstScore = this.calculateScore(worstEntry);
     return this.calculateScore(tempEntry) > worstScore;
   }
 

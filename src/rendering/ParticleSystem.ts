@@ -382,6 +382,11 @@ export class ParticleSystem {
     });
   }
 
+  // Get current particle count (Week 4 - for performance monitoring)
+  getParticleCount(): number {
+    return this.particles.length;
+  }
+
   // Clear all particles
   clear(): void {
     for (const particle of this.particles) {

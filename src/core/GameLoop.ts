@@ -31,6 +31,8 @@ import type { GameEvent } from '../events/EventManager';
 import { AtmosphericSystem } from '../environment/AtmosphericSystem';
 import { FactionSystem } from './FactionSystem';
 import { EcosystemRegulator } from '../ai/EcosystemRegulator';
+import { PerformanceMonitor } from './PerformanceMonitor';
+import { TraitSynergies } from '../genetics/TraitSynergies';
 
 const MAX_COMPETITOR_SPECIES = 6;
 
@@ -135,6 +137,7 @@ export class GameLoop {
   private factionSystem: FactionSystem;
   private ecosystemRegulator: EcosystemRegulator;
   private currentEvent: GameEvent | null = null;
+  private performanceMonitor: PerformanceMonitor;
 
   constructor() {
     this.renderer = new PixiApp();
@@ -174,6 +177,7 @@ export class GameLoop {
     this.atmosphericSystem = new AtmosphericSystem();
     this.factionSystem = new FactionSystem();
     this.ecosystemRegulator = new EcosystemRegulator();
+    this.performanceMonitor = new PerformanceMonitor();
 
     // Setup event callback
     this.eventManager.setEventCallback((event) => {
@@ -557,6 +561,21 @@ export class GameLoop {
       this.factionSystem.updateProgress('population', stats.population);
       this.factionSystem.updateProgress('diversity', stats.diversity || 0);
       this.factionSystem.updateProgress('biomass', ecosystemStats.biomass);
+    }
+
+    // Update performance monitoring (Week 4)
+    const particleCount = this.renderer.particleSystem.getParticleCount();
+    const performanceMetrics = this.performanceMonitor.update(
+      allCells.length + resources.length,
+      allCells.length,
+      resources.length,
+      particleCount
+    );
+
+    // Log performance warnings if enabled
+    if (Config.DEBUG_GAME_LOOP && this.performanceMonitor.isPerformanceLow()) {
+      const warnings = this.performanceMonitor.getWarnings();
+      warnings.forEach(warning => console.warn('[Performance]', warning));
     }
 
     // Update camera to follow species center (species-level view)
