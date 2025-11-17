@@ -1,4 +1,16 @@
 // Performance monitoring system for tracking FPS and entity counts
+
+// Extended Performance interface with memory property
+interface PerformanceMemory {
+  usedJSHeapSize: number;
+  totalJSHeapSize: number;
+  jsHeapSizeLimit: number;
+}
+
+interface ExtendedPerformance extends Performance {
+  memory?: PerformanceMemory;
+}
+
 export interface PerformanceMetrics {
   fps: number;
   frameTime: number; // ms
@@ -49,10 +61,11 @@ export class PerformanceMonitor {
     const avgFrameTime = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length;
     this.currentFPS = avgFrameTime > 0 ? Math.round(1000 / avgFrameTime) : 60; // Default to 60 FPS on first frame
 
-    // Get memory usage if available
+    // Get memory usage if available (Chrome/Edge specific feature)
     let memoryUsage: number | undefined;
-    if ((performance as any).memory) {
-      memoryUsage = (performance as any).memory.usedJSHeapSize / (1024 * 1024); // Convert to MB
+    const perfWithMemory = performance as ExtendedPerformance;
+    if (perfWithMemory.memory) {
+      memoryUsage = perfWithMemory.memory.usedJSHeapSize / (1024 * 1024); // Convert to MB
     }
 
     const metrics: PerformanceMetrics = {

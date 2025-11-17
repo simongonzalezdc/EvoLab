@@ -213,7 +213,8 @@ export class PlayerSpeciesManager {
         if (newValue !== undefined && typeof newValue === 'number') {
           // Gradually shift toward new trait value
           const currentValue = cell.traits[traitKey] as number;
-          (cell.traits as any)[traitKey] = currentValue + (newValue - currentValue) * 0.1;
+          // Type-safe dynamic trait assignment
+          (cell.traits[traitKey] as number) = currentValue + (newValue - currentValue) * 0.1;
         }
       });
       cell.genome.traits = cell.traits;
@@ -240,9 +241,10 @@ export class PlayerSpeciesManager {
 
     this.cells.forEach(cell => {
       totalSurvivalTime += cell.survivalTime;
-      
+
       Object.keys(cell.traits).forEach(key => {
-        const value = (cell.traits as any)[key];
+        const traitKey = key as keyof Traits;
+        const value = cell.traits[traitKey];
         if (typeof value === 'number') {
           if (!traitValues[key]) traitValues[key] = [];
           traitValues[key].push(value);
@@ -254,7 +256,8 @@ export class PlayerSpeciesManager {
       const values = traitValues[key];
       if (values && values.length > 0) {
         const avg = values.reduce((a, b) => a + b, 0) / values.length;
-        (avgTraits as any)[key] = avg;
+        const traitKey = key as keyof Traits;
+        avgTraits[traitKey] = avg as never; // Use 'never' for partial trait assignment
       }
     });
 

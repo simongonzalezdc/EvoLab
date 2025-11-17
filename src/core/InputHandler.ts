@@ -8,13 +8,19 @@ export class InputHandler {
   private zoomOutCallbacks: Array<() => void> = [];
   private resetZoomCallbacks: Array<() => void> = [];
 
+  // Store handler references for cleanup
+  private keydownHandler: ((e: KeyboardEvent) => void) | null = null;
+  private keyupHandler: ((e: KeyboardEvent) => void) | null = null;
+  private mousemoveHandler: ((e: MouseEvent) => void) | null = null;
+  private wheelHandler: ((e: WheelEvent) => void) | null = null;
+
   constructor() {
     this.setupKeyboardListeners();
     this.setupMouseListeners();
   }
 
   private setupKeyboardListeners(): void {
-    window.addEventListener('keydown', (e: KeyboardEvent) => {
+    this.keydownHandler = (e: KeyboardEvent) => {
       this.keys.set(e.key.toLowerCase(), true);
 
       // Zoom controls: +/= for zoom in, -/_ for zoom out, 0 for reset
@@ -43,21 +49,24 @@ export class InputHandler {
       if (['w', 'a', 's', 'd', ' '].includes(key)) {
         e.preventDefault();
       }
-    });
+    };
 
-    window.addEventListener('keyup', (e: KeyboardEvent) => {
+    this.keyupHandler = (e: KeyboardEvent) => {
       this.keys.set(e.key.toLowerCase(), false);
-    });
+    };
+
+    window.addEventListener('keydown', this.keydownHandler);
+    window.addEventListener('keyup', this.keyupHandler);
   }
 
   private setupMouseListeners(): void {
-    window.addEventListener('mousemove', (e: MouseEvent) => {
+    this.mousemoveHandler = (e: MouseEvent) => {
       this.mousePosition.x = e.clientX;
       this.mousePosition.y = e.clientY;
-    });
+    };
 
     // Mouse wheel for zoom
-    window.addEventListener('wheel', (e: WheelEvent) => {
+    this.wheelHandler = (e: WheelEvent) => {
       // Only handle zoom when not over UI elements
       const target = e.target as HTMLElement;
       if (target && (target.closest('#hud') || target.closest('.modal-overlay') || target.closest('button'))) {
@@ -67,7 +76,10 @@ export class InputHandler {
       e.preventDefault();
       const delta = e.deltaY > 0 ? -0.1 : 0.1; // Scroll down = zoom out, scroll up = zoom in
       this.zoomCallbacks.forEach(callback => callback(delta));
-    }, { passive: false });
+    };
+
+    window.addEventListener('mousemove', this.mousemoveHandler);
+    window.addEventListener('wheel', this.wheelHandler, { passive: false });
   }
 
   isKeyPressed(key: string): boolean {
@@ -115,6 +127,24 @@ export class InputHandler {
   }
 
   dispose(): void {
+    // Remove all event listeners to prevent memory leaks
+    if (this.keydownHandler) {
+      window.removeEventListener('keydown', this.keydownHandler);
+      this.keydownHandler = null;
+    }
+    if (this.keyupHandler) {
+      window.removeEventListener('keyup', this.keyupHandler);
+      this.keyupHandler = null;
+    }
+    if (this.mousemoveHandler) {
+      window.removeEventListener('mousemove', this.mousemoveHandler);
+      this.mousemoveHandler = null;
+    }
+    if (this.wheelHandler) {
+      window.removeEventListener('wheel', this.wheelHandler);
+      this.wheelHandler = null;
+    }
+
     this.keys.clear();
     this.zoomCallbacks = [];
     this.zoomInCallbacks = [];
