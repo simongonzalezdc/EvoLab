@@ -35,6 +35,7 @@ import { PerformanceMonitor } from './PerformanceMonitor';
 import { TraitSynergies } from '../genetics/TraitSynergies';
 import { LeaderboardSystem } from '../achievements/LeaderboardSystem';
 import { NearMissTracker } from '../achievements/NearMissTracker';
+import { gameStateAnnouncer } from '../utils/GameStateAnnouncer';
 
 const MAX_COMPETITOR_SPECIES = 6;
 
@@ -576,6 +577,26 @@ export class GameLoop {
       if (stats.population > this.maxPopulationReached) {
         this.maxPopulationReached = stats.population;
       }
+
+      // Update game state announcements for accessibility (Phase 4)
+      const avgTraits = stats.averageTraits as Traits;
+      gameStateAnnouncer.announcePopulationChange(stats.population);
+      gameStateAnnouncer.announceHealthStatus(avgTraits.health, avgTraits.maxHealth);
+      gameStateAnnouncer.announceATPStatus(avgTraits.atp, avgTraits.maxATP);
+
+      // Announce biome changes
+      const center = this.entityManager.playerSpecies.getCenterPosition();
+      const currentBiome = this.biomeGenerator.getBiomeAt(center.x, center.y);
+      const biomeNames: Record<string, string> = {
+        'shallow': 'Shallow Water',
+        'deep': 'Deep Water',
+        'kelp': 'Kelp Forest',
+        'volcanic': 'Volcanic Vent',
+        'arctic': 'Arctic Zone',
+        'coral': 'Coral Reef',
+        'abyss': 'Abyss',
+      };
+      gameStateAnnouncer.announceBiomeChange(currentBiome.type, biomeNames[currentBiome.type] || currentBiome.type);
     }
 
     // Update near-miss tracker (Week 3)
@@ -596,6 +617,9 @@ export class GameLoop {
             playerCell.position.y,
             nearMissResult.bonusDNA
           );
+
+          // Announce escape to screen reader users (Phase 4)
+          gameStateAnnouncer.announceCombat('escaped');
 
           if (Config.DEBUG_GAME_LOOP) {
             console.log(
@@ -741,6 +765,56 @@ export class GameLoop {
         this.evolutionSystems.getSpeciesCount(),
         this.evolutionSystems.getMatingStats()
       );
+
+      // Update accessible game state panel (Phase 4)
+      const speciesCenter = this.entityManager.playerSpecies.getCenterPosition();
+      const currentBiome = this.biomeGenerator.getBiomeAt(speciesCenter.x, speciesCenter.y);
+      const biomeNames: Record<string, string> = {
+        'shallow': 'Shallow Water',
+        'deep': 'Deep Water',
+        'kelp': 'Kelp Forest',
+        'volcanic': 'Volcanic Vent',
+        'arctic': 'Arctic Zone',
+        'coral': 'Coral Reef',
+        'abyss': 'Abyss',
+      };
+      const biomeDescriptions: Record<string, string> = {
+        'shallow': 'Safe waters with abundant resources',
+        'deep': 'Deeper waters with moderate resources',
+        'kelp': 'Dense vegetation provides cover and food',
+        'volcanic': 'Extreme heat and mineral-rich environment',
+        'arctic': 'Freezing temperatures, scarce resources',
+        'coral': 'Rich ecosystem with diverse life',
+        'abyss': 'Dark depths with extreme pressure',
+      };
+
+      // Calculate combat intensity
+      const combatIntensity = this.calculateCombatIntensity();
+      let combatLevel: 'none' | 'low' | 'moderate' | 'high' = 'none';
+      if (combatIntensity > 0.7) combatLevel = 'high';
+      else if (combatIntensity > 0.4) combatLevel = 'moderate';
+      else if (combatIntensity > 0.1) combatLevel = 'low';
+
+      this.uiController.updateGameStateData({
+        population: speciesStats.population,
+        generation: speciesStats.generation,
+        averageHealth: avgTraits.health,
+        averageHealthPercent: (avgTraits.health / avgTraits.maxHealth) * 100,
+        averageATP: avgTraits.atp,
+        averageATPPercent: (avgTraits.atp / avgTraits.maxATP) * 100,
+        totalResourcesCollected: speciesStats.totalResourcesCollected,
+        dnaPoints: this.entityManager.playerSpecies.getBaseGenome().dnaPoints,
+        currentBiome: currentBiome.type,
+        biomeName: biomeNames[currentBiome.type] || currentBiome.type,
+        biomeDescription: biomeDescriptions[currentBiome.type] || 'Unknown biome',
+        nearbyThreats: Math.floor(combatIntensity * 10), // Approximate threat count
+        combatIntensity: combatLevel,
+        timeOfDay: this.dayNightCycle.getTimeOfDay(),
+        temperature: currentBiome.type === 'volcanic' ? 'hot' : currentBiome.type === 'arctic' ? 'cold' : 'normal',
+        hazards: currentBiome.hazards.map((h: any) => `${h.type} (intensity: ${Math.round(h.intensity * 100)}%)`),
+        survivalTime: speciesStats.averageSurvivalTime,
+        diversity: speciesStats.diversity || 0,
+      });
     } else if (this.entityManager.playerCell) {
       // Legacy single-cell mode
       const player = this.entityManager.playerCell;
@@ -1262,6 +1336,7 @@ export class GameLoop {
     this.historyTracker.reset();
     this.timeControl.reset();
     this.dayNightCycle = new DayNightCycle(Config.DAY_NIGHT_START_TIME, Config.DAY_NIGHT_SPEED_MULTIPLIER);
+    gameStateAnnouncer.reset(); // Reset accessibility announcements
     this.entityManager = new EntityManager(
       this.renderer,
       this.biomeGenerator,
