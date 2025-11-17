@@ -32,8 +32,6 @@ export class PixiApp {
     // Create particle layer (rendered above entities)
     this.particleLayer = new Container();
     this.particleSystem = new ParticleSystem(this.particleLayer);
-
-    console.log('[PixiApp] Constructor: WorldContainer initialized with visible=true, alpha=1.0');
   }
 
   async initialize(): Promise<void> {
@@ -70,8 +68,6 @@ export class PixiApp {
     this.createBackgroundLayer();
 
     // Add world container to stage
-    console.log('[PixiApp] initialize: Adding worldContainer to stage');
-    console.log(`[PixiApp] initialize: Stage visible: ${this.app.stage.visible}, alpha: ${this.app.stage.alpha}`);
     this.app.stage.addChild(this.worldContainer);
 
     // Add UI container to stage (rendered on top, not affected by camera)
@@ -89,10 +85,6 @@ export class PixiApp {
     const screenSize = this.getScreenSize();
     this.worldContainer.x = screenSize.width / 2;
     this.worldContainer.y = screenSize.height / 2;
-    
-    console.log(`[PixiApp] initialize: WorldContainer positioned at (${this.worldContainer.x}, ${this.worldContainer.y}) - Centered for fully zoomed out view`);
-    console.log(`[PixiApp] initialize: WorldContainer visible: ${this.worldContainer.visible}, alpha: ${this.worldContainer.alpha}`);
-    console.log(`[PixiApp] initialize: Canvas size: ${screenSize.width}x${screenSize.height}, zoom: ${this.zoomLevel}`);
 
     this.isInitialized = true;
   }
@@ -168,22 +160,18 @@ export class PixiApp {
 
   // Add biome layer underneath entities
   addBiomeLayer(biomeContainer: Container): void {
-    console.log(`[PixiApp] Adding biome layer. WorldContainer children before: ${this.worldContainer.children.length}`);
-    console.log(`[PixiApp] Biome container visible: ${biomeContainer.visible}, alpha: ${biomeContainer.alpha}`);
-    console.log(`[PixiApp] WorldContainer position: (${this.worldContainer.x}, ${this.worldContainer.y})`);
-    console.log(`[PixiApp] WorldContainer scale: (${this.worldContainer.scale.x}, ${this.worldContainer.scale.y})`);
-    
     this.biomeLayer = biomeContainer;
     this.worldContainer.addChildAt(biomeContainer, 0); // Add at bottom
-    
-    console.log(`[PixiApp] Adding biome layer. WorldContainer children after: ${this.worldContainer.children.length}`);
-    console.log(`[PixiApp] Biome layer index in worldContainer: ${this.worldContainer.getChildIndex(biomeContainer)}`);
-    console.log(`[PixiApp] WorldContainer visible: ${this.worldContainer.visible}, alpha: ${this.worldContainer.alpha}`);
-    console.log(`[PixiApp] Stage visible: ${this.app.stage.visible}, alpha: ${this.app.stage.alpha}`);
-    console.log(`[PixiApp] Stage children count: ${this.app.stage.children.length}`);
   }
 
-  // Update camera to follow target position
+  // Camera smoothing properties
+  private targetCameraX = 0;
+  private targetCameraY = 0;
+  private currentCameraX = 0;
+  private currentCameraY = 0;
+  private cameraSmoothing = 0.15; // 0.1 = very smooth, 0.3 = responsive
+
+  // Update camera to follow target position with smooth easing
   updateCamera(targetX: number, targetY: number): void {
     // Don't move camera when fully zoomed out (at minimum zoom)
     if (this.zoomLevel <= this.minZoom) {
@@ -194,28 +182,21 @@ export class PixiApp {
       return;
     }
 
-    // Camera follows player - use actual canvas size
-    // Account for zoom level in camera positioning
+    // Smooth camera easing (lerp)
+    this.targetCameraX = targetX;
+    this.targetCameraY = targetY;
+    this.currentCameraX += (this.targetCameraX - this.currentCameraX) * this.cameraSmoothing;
+    this.currentCameraY += (this.targetCameraY - this.currentCameraY) * this.cameraSmoothing;
+
+    // Camera follows player with smoothed position
     const { width, height } = this.getScreenSize();
-    const oldX = this.worldContainer.x;
-    const oldY = this.worldContainer.y;
-    
-    // MAJOR DEBUG: Try positioning target at exact screen center
-    // First, position container so (0,0) is at screen center
+    // Position target at exact screen center
     this.worldContainer.x = width / 2;
     this.worldContainer.y = height / 2;
-    
-    // Then apply zoom and target offset
-    this.worldContainer.x -= targetX * this.zoomLevel;
-    this.worldContainer.y -= targetY * this.zoomLevel;
-    
-    console.log(`[PixiApp] updateCamera: target(${targetX}, ${targetY}), zoom=${this.zoomLevel}, canvas(${width}x${height})`);
-    console.log(`[PixiApp] updateCamera: WorldContainer moved from (${oldX}, ${oldY}) to (${this.worldContainer.x}, ${this.worldContainer.y})`);
-    
-    // DEBUG: Calculate where target should appear on screen
-    const targetScreenX = targetX * this.zoomLevel + this.worldContainer.x;
-    const targetScreenY = targetY * this.zoomLevel + this.worldContainer.y;
-    console.log(`[PixiApp] DEBUG: Target should appear at screen: (${targetScreenX}, ${targetScreenY}), center: (${width/2}, ${height/2})`);
+
+    // Apply zoom and smoothed target offset
+    this.worldContainer.x -= this.currentCameraX * this.zoomLevel;
+    this.worldContainer.y -= this.currentCameraY * this.zoomLevel;
   }
 
   // Zoom methods

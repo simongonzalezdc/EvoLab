@@ -231,6 +231,162 @@ export class ParticleSystem {
     setTimeout(() => clearInterval(expandInterval), life * 1000);
   }
 
+  // Create combo effect (burst of colorful particles with scaling text)
+  createComboEffect(x: number, y: number, comboSize: number): void {
+    // Create burst of golden particles for combo
+    const particleCount = 15 + comboSize * 2;
+    for (let i = 0; i < particleCount; i++) {
+      const angle = (Math.PI * 2 * i) / particleCount;
+      const speed = 60 + Math.random() * 80;
+
+      const graphic = new Graphics();
+      graphic.star(0, 0, 5, 4 + Math.random() * 3, 2);
+      graphic.fill(0xffd700); // Golden color for combo
+      graphic.x = x;
+      graphic.y = y;
+
+      this.container.addChild(graphic);
+
+      this.particles.push({
+        graphic,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 30, // Slight upward bias
+        life: 0.8 + Math.random() * 0.4,
+        maxLife: 1.2,
+        fadeOut: true,
+        shrink: true,
+        gravity: 20, // Gravity pulls particles down
+      });
+    }
+
+    // Add some extra sparkle particles
+    for (let i = 0; i < 8; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 30 + Math.random() * 50;
+
+      const graphic = new Graphics();
+      graphic.circle(0, 0, 3 + Math.random() * 2);
+      graphic.fill(0xffff00); // Bright yellow sparkles
+      graphic.x = x;
+      graphic.y = y;
+
+      this.container.addChild(graphic);
+
+      this.particles.push({
+        graphic,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 50, // Float upward
+        life: 1.0 + Math.random() * 0.5,
+        maxLife: 1.5,
+        fadeOut: true,
+        shrink: false,
+        gravity: -15, // Negative gravity for floating effect
+      });
+    }
+  }
+
+  // Create DNA collection sparkles (rainbow particles)
+  createDNASparkles(x: number, y: number, dnaAmount: number): void {
+    const particleCount = Math.min(15, 5 + dnaAmount * 2);
+    const colors = [0xff00ff, 0x00ffff, 0xffff00, 0xff0080, 0x80ff00]; // Rainbow colors
+
+    for (let i = 0; i < particleCount; i++) {
+      const angle = (Math.PI * 2 * i) / particleCount;
+      const speed = 40 + Math.random() * 60;
+      const color = colors[i % colors.length];
+
+      const graphic = new Graphics();
+      graphic.star(0, 0, 4, 3, 1.5);
+      graphic.fill(color);
+      graphic.x = x;
+      graphic.y = y;
+
+      this.container.addChild(graphic);
+
+      this.particles.push({
+        graphic,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 40,
+        life: 0.6 + Math.random() * 0.4,
+        maxLife: 1.0,
+        fadeOut: true,
+        shrink: true,
+        gravity: 15,
+      });
+    }
+  }
+
+  // Create evolution glow effect (pulsing aura)
+  createEvolutionGlow(x: number, y: number): void {
+    const ringCount = 3;
+    for (let ring = 0; ring < ringCount; ring++) {
+      const delay = ring * 0.1;
+      setTimeout(() => {
+        const graphic = new Graphics();
+        graphic.circle(0, 0, 20);
+        graphic.stroke({ color: 0x00ff00, width: 3, alpha: 0.8 });
+        graphic.x = x;
+        graphic.y = y;
+
+        this.container.addChild(graphic);
+
+        this.particles.push({
+          graphic,
+          vx: 0,
+          vy: 0,
+          life: 0.8,
+          maxLife: 0.8,
+          fadeOut: true,
+          shrink: false,
+        });
+
+        // Expand the ring
+        let scale = 1;
+        const expandInterval = setInterval(() => {
+          scale += 0.15;
+          graphic.scale.set(scale);
+          if (scale > 3) clearInterval(expandInterval);
+        }, 16);
+      }, delay * 1000);
+    }
+  }
+
+  // Create screen flash for near-death warning
+  createNearDeathFlash(): void {
+    // This would typically be handled by a screen overlay in the renderer
+    // For now, create red particles around the edges
+    const edgePositions = [
+      { x: 100, y: 100 }, { x: 500, y: 100 }, { x: 900, y: 100 },
+      { x: 100, y: 400 }, { x: 900, y: 400 },
+      { x: 100, y: 700 }, { x: 500, y: 700 }, { x: 900, y: 700 },
+    ];
+
+    edgePositions.forEach(pos => {
+      const graphic = new Graphics();
+      graphic.rect(0, 0, 50, 50);
+      graphic.fill({ color: 0xff0000, alpha: 0.3 });
+      graphic.x = pos.x;
+      graphic.y = pos.y;
+
+      this.container.addChild(graphic);
+
+      this.particles.push({
+        graphic,
+        vx: 0,
+        vy: 0,
+        life: 0.3,
+        maxLife: 0.3,
+        fadeOut: true,
+        shrink: false,
+      });
+    });
+  }
+
+  // Get current particle count (Week 4 - for performance monitoring)
+  getParticleCount(): number {
+    return this.particles.length;
+  }
+
   // Clear all particles
   clear(): void {
     for (const particle of this.particles) {

@@ -2,6 +2,7 @@
 
 import * as Tone from 'tone';
 import { BiomeType } from '../environment/BiomeGenerator';
+import { Config } from '../core/Config';
 
 export interface MusicState {
   biome: BiomeType;
@@ -364,7 +365,9 @@ export class MusicManager {
       
       await Promise.race([startPromise, reverbPromise, ambientReverbPromise, timeoutPromise]);
       this.isInitialized = true;
-      console.log('MusicManager: Audio initialized successfully');
+      if (Config.DEBUG_AUDIO) {
+        console.log('MusicManager: Audio initialized successfully');
+      }
     } catch (error) {
       console.warn('MusicManager: Audio initialization failed (will retry on user interaction):', error);
       // Don't throw - allow game to continue without audio
@@ -388,7 +391,9 @@ export class MusicManager {
         await this.reverb.generate();
         await this.ambientReverb.generate();
         this.isInitialized = true;
-        console.log('MusicManager: Audio initialized on user interaction');
+        if (Config.DEBUG_AUDIO) {
+          console.log('MusicManager: Audio initialized on user interaction');
+        }
       } catch (error) {
         console.warn('MusicManager: Still failed to initialize audio:', error);
       }

@@ -11,6 +11,7 @@ import { TraitSystem } from '../genetics/TraitSystem';
 import { PopulationManager, type AISpeciesSetup } from '../ai/PopulationManager';
 import { CombatSystem } from './CombatSystem';
 import { PlayerSpeciesManager } from '../core/PlayerSpeciesManager';
+import { SoundManager } from '../audio/SoundManager';
 import type { Traits } from '../types/entities';
 
 export class EntityManager {
@@ -18,12 +19,20 @@ export class EntityManager {
   private resources: Map<string, Resource> = new Map();
   private renderer: PixiApp;
   private biomeGenerator: BiomeGenerator;
+  private soundManager: SoundManager | null = null;
   public playerCell: Cell | null = null; // Keep for backward compatibility, but deprecated
   public playerSpecies: PlayerSpeciesManager | null = null;
   public glucoseCollected = 0;
   public reproductionSystem: ReproductionSystem;
   public populationManager: PopulationManager;
   public combatSystem: CombatSystem;
+
+  // Combo system for dopamine boost!
+  private recentCollections: number[] = []; // Timestamps of recent resource collections
+  private comboCount: number = 0;
+  private readonly COMBO_TIME_WINDOW = 5; // seconds
+  private readonly COMBO_THRESHOLD = 3; // 3+ collections for a combo
+  private readonly COMBO_DNA_MULTIPLIER = 2; // 2x DNA bonus for combos
 
   constructor(renderer: PixiApp, biomeGenerator: BiomeGenerator, aiSpeciesSetup?: AISpeciesSetup[]) {
     this.renderer = renderer;
@@ -41,6 +50,10 @@ export class EntityManager {
     } else {
       this.populationManager.initializeDefaultSpecies();
     }
+  }
+
+  setSoundManager(soundManager: SoundManager): void {
+    this.soundManager = soundManager;
   }
 
   // Create player species from genome
@@ -79,7 +92,7 @@ export class EntityManager {
     return cell;
   }
 
-  // Spawn resources (glucose)
+  // Spawn resources (glucose) - Week 3: with golden resource chance
   spawnResources(): void {
     const halfWidth = Config.LAKE_WIDTH / 2;
     const halfHeight = Config.LAKE_HEIGHT / 2;
@@ -88,10 +101,15 @@ export class EntityManager {
       const x = Math.random() * Config.LAKE_WIDTH - halfWidth;
       const y = Math.random() * Config.LAKE_HEIGHT - halfHeight;
 
-      const sprite = this.renderer.createCircle(x, y, Config.GLUCOSE_RADIUS, Config.GLUCOSE_COLOR);
+      // Week 3: 2% chance for golden resource (10x value)
+      const isGolden = Math.random() < Config.GOLDEN_RESOURCE_CHANCE;
+      const rarity = isGolden ? 'golden' : 'common';
+      const color = isGolden ? 0xffd700 : Config.GLUCOSE_COLOR; // Gold color for golden resources
+
+      const sprite = this.renderer.createCircle(x, y, Config.GLUCOSE_RADIUS, color);
       this.renderer.addToWorld(sprite);
 
-      const resource = new Resource(`glucose-${i}`, x, y, 'glucose', sprite);
+      const resource = new Resource(`glucose-${i}`, x, y, 'glucose', sprite, rarity);
       this.resources.set(resource.id, resource);
     }
   }
@@ -131,8 +149,42 @@ export class EntityManager {
     });
   }
 
+  // Check combo status and award bonuses (dopamine boost!)
+  private checkCombo(currentTime: number, player: Cell): { isCombo: boolean; comboSize: number } {
+    // Remove old collections outside the time window
+    this.recentCollections = this.recentCollections.filter(
+      time => (currentTime - time) <= this.COMBO_TIME_WINDOW
+    );
+
+    // Add current collection
+    this.recentCollections.push(currentTime);
+
+    const comboSize = this.recentCollections.length;
+    const isCombo = comboSize >= this.COMBO_THRESHOLD;
+
+    if (isCombo) {
+      // Award combo bonus DNA points!
+      const baseDNA = Config.DNA_FROM_GLUCOSE;
+      const bonusDNA = baseDNA * (this.COMBO_DNA_MULTIPLIER - 1); // Extra DNA from combo
+      player.genome.dnaPoints += bonusDNA;
+
+      // Visual feedback
+      this.renderer.particleSystem.createComboEffect(
+        player.position.x,
+        player.position.y,
+        comboSize
+      );
+
+      this.comboCount++;
+    }
+
+    return { isCombo, comboSize };
+  }
+
   // Check if player is close enough to collect resources
   private checkResourceCollection(player: Cell): void {
+    const currentTime = Date.now() / 1000; // Convert to seconds
+
     this.resources.forEach(resource => {
       if (!resource.isCollected) {
         const distance = player.distanceTo(resource.position);
@@ -152,10 +204,25 @@ export class EntityManager {
             player.restoreATP(Config.ATP_FROM_GLUCOSE);
             player.collectCompound('glucose', 5);
             this.glucoseCollected++;
+
+            // Check for combo bonus!
+            const combo = this.checkCombo(currentTime, player);
+            if (combo.isCombo) {
+              // Play combo sound!
+              this.soundManager?.playCombo(combo.comboSize);
+              if (Config.DEBUG_GAME_LOOP) {
+                console.log(`🔥 COMBO x${combo.comboSize}! Bonus DNA awarded!`);
+              }
+            } else {
+              // Play regular collection sound
+              this.soundManager?.play('collect');
+            }
           } else if (resource.type === 'aminoAcid') {
             player.collectCompound('aminoAcid', 3);
+            this.soundManager?.play('collect');
           } else if (resource.type === 'phosphate') {
             player.collectCompound('phosphate', 2);
+            this.soundManager?.play('collect');
           }
         }
       }

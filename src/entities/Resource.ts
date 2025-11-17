@@ -4,11 +4,13 @@ import { Graphics } from 'pixi.js';
 import type { Vector2D } from '../types/entities';
 
 export type ResourceType = 'glucose' | 'aminoAcid' | 'phosphate';
+export type ResourceRarity = 'common' | 'golden'; // Golden = 1-2% spawn chance, 10x value
 
 export class Resource {
   public id: string;
   public position: Vector2D;
   public type: ResourceType;
+  public rarity: ResourceRarity;
   public amount: number;
   public sprite: Graphics;
   public isCollected = false;
@@ -16,26 +18,32 @@ export class Resource {
   private pulseTime = 0;
   private baseScale = 1.0;
 
-  constructor(id: string, x: number, y: number, type: ResourceType, sprite: Graphics) {
+  constructor(id: string, x: number, y: number, type: ResourceType, sprite: Graphics, rarity: ResourceRarity = 'common') {
     this.id = id;
     this.position = { x, y };
     this.type = type;
-    this.amount = this.getResourceAmount(type);
+    this.rarity = rarity;
+    this.amount = this.getResourceAmount(type, rarity);
     this.sprite = sprite;
     this.pulseTime = Math.random() * Math.PI * 2; // Random start for variety
   }
 
-  private getResourceAmount(type: ResourceType): number {
-    switch (type) {
-      case 'glucose':
-        return 25; // ATP value
-      case 'aminoAcid':
-        return 15;
-      case 'phosphate':
-        return 10;
-      default:
-        return 10;
-    }
+  private getResourceAmount(type: ResourceType, rarity: ResourceRarity = 'common'): number {
+    const baseAmount = (() => {
+      switch (type) {
+        case 'glucose':
+          return 25; // ATP value
+        case 'aminoAcid':
+          return 15;
+        case 'phosphate':
+          return 10;
+        default:
+          return 10;
+      }
+    })();
+
+    // Golden resources are worth 10x
+    return rarity === 'golden' ? baseAmount * 10 : baseAmount;
   }
 
   // Mark resource as collected
@@ -60,15 +68,24 @@ export class Resource {
 
   // Update visual effects (pulse and shimmer)
   private updateVisualEffects(deltaTime: number): void {
-    this.pulseTime += deltaTime * 2; // 2x speed for noticeable effect
+    // Golden resources pulse more dramatically
+    const pulseSpeed = this.rarity === 'golden' ? 4 : 2;
+    const pulseIntensity = this.rarity === 'golden' ? 0.2 : 0.1;
 
-    // Pulsing scale effect (0.9 to 1.1)
-    const pulseScale = 1.0 + Math.sin(this.pulseTime) * 0.1;
+    this.pulseTime += deltaTime * pulseSpeed;
+
+    // Pulsing scale effect
+    const pulseScale = 1.0 + Math.sin(this.pulseTime) * pulseIntensity;
     this.sprite.scale.set(pulseScale);
 
-    // Shimmering alpha effect (0.7 to 1.0)
-    const shimmerAlpha = 0.85 + Math.sin(this.pulseTime * 1.5) * 0.15;
-    this.sprite.alpha = shimmerAlpha;
+    // Shimmering alpha effect (golden resources more dramatic)
+    if (this.rarity === 'golden') {
+      const shimmerAlpha = 0.7 + Math.sin(this.pulseTime * 1.5) * 0.3; // 0.7-1.0
+      this.sprite.alpha = shimmerAlpha;
+    } else {
+      const shimmerAlpha = 0.85 + Math.sin(this.pulseTime * 1.5) * 0.15;
+      this.sprite.alpha = shimmerAlpha;
+    }
   }
 
   // Respawn resource with animation

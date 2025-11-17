@@ -70,10 +70,12 @@ export class PlayerSpeciesManager {
       // Ensure sprite position matches cell position
       cell.sprite.x = cell.position.x;
       cell.sprite.y = cell.position.y;
-      
-      console.log(`[PlayerSpeciesManager] Created cell ${i} at (${x}, ${y}), sprite at (${sprite.x}, ${sprite.y}), radius: ${radius}, color: 0x${genome.traits.color.toString(16)}`);
-      console.log(`[PlayerSpeciesManager] Cell sprite visible: ${sprite.visible}, alpha: ${sprite.alpha}, parent: ${sprite.parent ? 'has parent' : 'no parent'}`);
-      
+
+      if (Config.DEBUG_PLAYER_SPECIES) {
+        console.log(`[PlayerSpeciesManager] Created cell ${i} at (${x}, ${y}), sprite at (${sprite.x}, ${sprite.y}), radius: ${radius}, color: 0x${genome.traits.color.toString(16)}`);
+        console.log(`[PlayerSpeciesManager] Cell sprite visible: ${sprite.visible}, alpha: ${sprite.alpha}, parent: ${sprite.parent ? 'has parent' : 'no parent'}`);
+      }
+
       this.cells.push(cell);
     }
   }

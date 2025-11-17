@@ -118,6 +118,26 @@
   - **Difficulty Scaling**: AI becomes cautious after repeated losses
   - Pack leaders coordinate hunts with 20% speed boost
 
+### Phase 5 - Enhanced Simulation ⚠️ (Needs Integration)
+- ⚠️ **Random Events System** - Implemented but requires integration (see INTEGRATION_GUIDE.md)
+  - Asteroid impacts, disease outbreaks, algae blooms, environmental changes
+  - 8-10 event types with player choices and consequences
+  - Event notification UI complete
+- ⚠️ **Atmospheric Composition Tracking** - Code complete, needs GameLoop integration
+  - O2/CO2 tracking based on plant/animal populations
+  - Suffocation mechanics in low-oxygen zones
+  - Real-time atmospheric feedback
+- ⚠️ **Faction/Playstyle System** - Backend ready, UI complete, needs activation
+  - 4 factions with unique goals and bonuses
+  - Victory conditions and progression tracking
+  - Faction selection panel implemented
+- ⚠️ **Ecosystem Feedback Loops** - Population regulator ready, needs wiring
+  - Predator-prey oscillations
+  - Resource depletion effects
+  - Self-stabilizing populations
+
+**Note:** Phase 5 features are fully implemented with comprehensive code but need to be integrated into the main game loop. See `INTEGRATION_GUIDE.md` for step-by-step integration instructions and `COMPREHENSIVE_ANALYSIS.md` for detailed assessment.
+
 ---
 
 ## 🚀 Quick Start
@@ -320,4 +340,4 @@ Free for educational and commercial use.
 
 **Made with ❤️ for science education and open source**
 
-*Last Updated: November 15, 2025 - Phase 4 Complete + Enhanced Features*
+*Last Updated: November 16, 2025 - Phase 4 Complete + Phase 5 Pending Integration*

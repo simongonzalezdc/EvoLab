@@ -1,6 +1,7 @@
 // Genome data structure for storing all genetic traits
 
 import type { Traits, LineageInfo, CompoundStorage } from '../types/entities';
+import { TraitSynergies } from './TraitSynergies';
 
 export class Genome {
   public traits: Traits;
@@ -91,6 +92,16 @@ export class Genome {
     };
 
     return new Genome(defaultTraits, lineage);
+  }
+
+  // Get effective traits with synergy bonuses applied (Week 4)
+  getEffectiveTraits(): Traits {
+    return TraitSynergies.applySynergies(this.traits);
+  }
+
+  // Get active synergy names for display (Week 4)
+  getActiveSynergies(): string[] {
+    return TraitSynergies.getSynergyNames(this.traits);
   }
 
   // Clone genome with optional mutations
