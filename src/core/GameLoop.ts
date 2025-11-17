@@ -193,8 +193,7 @@ export class GameLoop {
     // Setup event callback
     this.eventManager.setEventCallback((event) => {
       this.currentEvent = event;
-      // TODO: Implement showEventNotification in UIController
-      // this.uiController.showEventNotification(event);
+      this.uiController.showEventNotification(event);
       if (Config.DEBUG_GAME_LOOP) {
         console.log('[GameLoop] Event triggered:', event.name);
       }
