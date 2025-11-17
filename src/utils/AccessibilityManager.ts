@@ -75,9 +75,42 @@ export class AccessibilityManager {
   private applyDyslexiaFriendlyFont(enabled: boolean): void {
     if (enabled) {
       document.body.classList.add('dyslexia-friendly-font');
+      // Check if font loaded successfully (after a delay to allow loading)
+      this.checkDyslexiaFontLoaded();
     } else {
       document.body.classList.remove('dyslexia-friendly-font');
     }
+  }
+
+  /**
+   * Check if OpenDyslexic font loaded successfully
+   * Provides fallback to Comic Sans MS if external font fails
+   */
+  private checkDyslexiaFontLoaded(): void {
+    if (typeof document === 'undefined' || !document.fonts) return;
+
+    // Wait for fonts to load
+    setTimeout(() => {
+      document.fonts.ready.then(() => {
+        const testElement = document.createElement('span');
+        testElement.style.fontFamily = 'OpenDyslexic';
+        testElement.style.position = 'absolute';
+        testElement.style.visibility = 'hidden';
+        testElement.textContent = 'test';
+        document.body.appendChild(testElement);
+
+        const computedFont = window.getComputedStyle(testElement).fontFamily;
+        document.body.removeChild(testElement);
+
+        // If OpenDyslexic didn't load, font will fall back to Comic Sans MS
+        if (!computedFont.includes('OpenDyslexic') && !computedFont.includes('Comic')) {
+          console.warn('OpenDyslexic font failed to load. Using fallback fonts (Comic Sans MS, Trebuchet MS, Verdana).');
+        }
+      }).catch(() => {
+        // Font loading failed, but fallback fonts will still work
+        console.warn('Font loading check failed. Fallback fonts will be used.');
+      });
+    }, 1000); // Give CDN time to load
   }
 
   /**

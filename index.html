@@ -6,7 +6,8 @@
     <meta name="description" content="EvoLab - Open source evolution simulator" />
     <title>EvoLab - Evolution Simulator</title>
     <!-- OpenDyslexic Font for dyslexia-friendly mode -->
-    <link rel="preconnect" href="https://fonts.cdnfonts.com">
+    <link rel="preconnect" href="https://fonts.cdnfonts.com" crossorigin>
+    <link rel="dns-prefetch" href="https://fonts.cdnfonts.com">
     <link href="https://fonts.cdnfonts.com/css/opendyslexic" rel="stylesheet">
     <style>
       * {
@@ -80,6 +81,18 @@
         letter-spacing: 0.12em;
         word-spacing: 0.16em;
         line-height: 1.5;
+      }
+
+      /* Exclude monospace elements from dyslexia font */
+      body.dyslexia-friendly-font #hud,
+      body.dyslexia-friendly-font #hud *,
+      body.dyslexia-friendly-font kbd,
+      body.dyslexia-friendly-font code,
+      body.dyslexia-friendly-font pre,
+      body.dyslexia-friendly-font .monospace {
+        font-family: 'Courier New', 'Consolas', 'Monaco', monospace !important;
+        letter-spacing: normal !important;
+        word-spacing: normal !important;
       }
 
       #app {

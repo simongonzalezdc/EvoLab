@@ -194,11 +194,33 @@ export class SaveSystem {
   async loadSettings(): Promise<GameSettings | undefined> {
     try {
       const result = await this.db.settings.get(1);
-      return result?.data;
+      if (!result?.data) {
+        return undefined;
+      }
+      // Merge with defaults to handle new settings from updates
+      return this.migrateSettings(result.data);
     } catch (error) {
       console.error('Failed to load settings:', error);
       throw new Error(`Failed to load settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * Migrate old settings to include new properties with defaults
+   * This ensures backward compatibility when new settings are added
+   */
+  private migrateSettings(savedSettings: Partial<GameSettings>): GameSettings {
+    const defaults = this.getDefaultSettings();
+    return {
+      ...defaults,
+      ...savedSettings,
+      // Ensure accessibility settings have defaults if missing
+      highContrastMode: savedSettings.highContrastMode ?? defaults.highContrastMode,
+      reduceMotion: savedSettings.reduceMotion ?? defaults.reduceMotion,
+      fontSize: savedSettings.fontSize ?? defaults.fontSize,
+      screenReaderAnnouncements: savedSettings.screenReaderAnnouncements ?? defaults.screenReaderAnnouncements,
+      dyslexiaFriendlyFont: savedSettings.dyslexiaFriendlyFont ?? defaults.dyslexiaFriendlyFont,
+    };
   }
 
   getDefaultSettings(): GameSettings {
