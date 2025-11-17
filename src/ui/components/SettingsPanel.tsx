@@ -356,6 +356,20 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           <p id="sr-announcements-desc" style={{ color: '#888', fontSize: '12px', margin: '4px 0 0 24px' }}>
             Announces important game events for screen readers
           </p>
+
+          <label style={{ display: 'flex', alignItems: 'center', color: '#fff', marginBottom: '8px', marginTop: '12px' }}>
+            <input
+              type="checkbox"
+              checked={localSettings.dyslexiaFriendlyFont ?? false}
+              onChange={e => handleChange('dyslexiaFriendlyFont', e.target.checked)}
+              style={{ marginRight: '8px' }}
+              aria-describedby="dyslexia-font-desc"
+            />
+            Dyslexia-Friendly Font
+          </label>
+          <p id="dyslexia-font-desc" style={{ color: '#888', fontSize: '12px', margin: '4px 0 0 24px' }}>
+            Uses OpenDyslexic font designed for improved readability
+          </p>
         </div>
 
         {/* Developer Tools */}

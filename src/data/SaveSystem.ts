@@ -49,6 +49,7 @@ export interface GameSettings {
   reduceMotion: boolean;
   fontSize: 'small' | 'medium' | 'large' | 'xlarge';
   screenReaderAnnouncements: boolean;
+  dyslexiaFriendlyFont: boolean;
 }
 
 class EvoLabDatabase extends Dexie {
@@ -221,6 +222,7 @@ export class SaveSystem {
       reduceMotion: false,
       fontSize: 'medium',
       screenReaderAnnouncements: true,
+      dyslexiaFriendlyFont: false,
     };
   }
 

@@ -25,6 +25,9 @@ export class AccessibilityManager {
     // Apply reduce motion (also respects system preference)
     this.applyReduceMotion(settings.reduceMotion);
 
+    // Apply dyslexia-friendly font
+    this.applyDyslexiaFriendlyFont(settings.dyslexiaFriendlyFont);
+
     // Enable/disable screen reader announcements
     screenReaderAnnouncer.setEnabled(settings.screenReaderAnnouncements);
   }
@@ -63,6 +66,17 @@ export class AccessibilityManager {
     } else {
       document.body.classList.remove('reduce-motion');
       this.removeReduceMotionStyles();
+    }
+  }
+
+  /**
+   * Apply dyslexia-friendly font
+   */
+  private applyDyslexiaFriendlyFont(enabled: boolean): void {
+    if (enabled) {
+      document.body.classList.add('dyslexia-friendly-font');
+    } else {
+      document.body.classList.remove('dyslexia-friendly-font');
     }
   }
 
