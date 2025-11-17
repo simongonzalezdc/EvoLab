@@ -5,7 +5,6 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { MatingSystem } from '../../src/genetics/MatingSystem';
-import { Genome } from '../../src/genetics/Genome';
 
 describe('MatingSystem', () => {
   let matingSystem: MatingSystem;

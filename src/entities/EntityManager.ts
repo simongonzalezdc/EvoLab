@@ -13,6 +13,7 @@ import { CombatSystem } from './CombatSystem';
 import { PlayerSpeciesManager } from '../core/PlayerSpeciesManager';
 import { SoundManager } from '../audio/SoundManager';
 import type { Traits } from '../types/entities';
+import { logger } from '../utils/Logger';
 
 export class EntityManager {
   private cells: Map<string, Cell> = new Map();
@@ -211,7 +212,7 @@ export class EntityManager {
               // Play combo sound!
               this.soundManager?.playCombo(combo.comboSize);
               if (Config.DEBUG_GAME_LOOP) {
-                console.log(`🔥 COMBO x${combo.comboSize}! Bonus DNA awarded!`);
+                logger.log(`🔥 COMBO x${combo.comboSize}! Bonus DNA awarded!`);
               }
             } else {
               // Play regular collection sound

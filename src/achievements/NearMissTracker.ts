@@ -1,6 +1,7 @@
 // Near-miss tracking system for close calls with predators
 import type { Cell } from '../entities/Cell';
 import { Config } from '../core/Config';
+import { logger } from '../utils/Logger';
 
 export interface NearMiss {
   timestamp: number;
@@ -68,7 +69,7 @@ export class NearMissTracker {
         this.recentEscapes.set(cell.id, currentTime);
 
         if (Config.DEBUG_GAME_LOOP) {
-          console.log(`⚠️ NEAR MISS! Predator ${cell.id} within ${distance.toFixed(0)}px - Threat: ${(threatLevel * 100).toFixed(0)}%`);
+          logger.log(`⚠️ NEAR MISS! Predator ${cell.id} within ${distance.toFixed(0)}px - Threat: ${(threatLevel * 100).toFixed(0)}%`);
         }
       }
     });
@@ -103,7 +104,7 @@ export class NearMissTracker {
               bonusDNA += dnaBonus;
 
               if (Config.DEBUG_GAME_LOOP) {
-                console.log(`🎉 NARROW ESCAPE! Bonus DNA: +${dnaBonus.toFixed(2)}`);
+                logger.log(`🎉 NARROW ESCAPE! Bonus DNA: +${dnaBonus.toFixed(2)}`);
               }
             }
           }

@@ -3,6 +3,7 @@
 import { Graphics, Container } from 'pixi.js';
 import { BiomeGenerator } from '../environment/BiomeGenerator';
 import { Config } from '../core/Config';
+import { logger } from '../utils/Logger';
 
 export class BiomeRenderer {
   private container: Container;
@@ -20,7 +21,7 @@ export class BiomeRenderer {
     this.biomeGenerator = biomeGenerator;
     
     if (Config.DEBUG_BIOME_RENDERER) {
-      console.log('[BiomeRenderer] Constructor: Container initialized with visible=true, alpha=1.0');
+      logger.log('[BiomeRenderer] Constructor: Container initialized with visible=true, alpha=1.0');
     }
   }
 
@@ -36,7 +37,7 @@ export class BiomeRenderer {
     }
 
     if (Config.DEBUG_BIOME_RENDERER) {
-      console.log(`[BiomeRenderer] Render camera (${cameraX}, ${cameraY}) view ${viewWidth}x${viewHeight}`);
+      logger.log(`[BiomeRenderer] Render camera (${cameraX}, ${cameraY}) view ${viewWidth}x${viewHeight}`);
     }
     
     // Map boundary limits - only render tiles within the game space
@@ -87,7 +88,7 @@ export class BiomeRenderer {
     }
 
     if (Config.DEBUG_BIOME_RENDERER) {
-      console.log(`[BiomeRenderer] Created ${tilesCreated} new tiles. Total tiles: ${this.tiles.size}`);
+      logger.log(`[BiomeRenderer] Created ${tilesCreated} new tiles. Total tiles: ${this.tiles.size}`);
     }
 
     // Clean up tiles far from camera
@@ -102,7 +103,7 @@ export class BiomeRenderer {
     }
 
     if (tilesRemoved > 0 && Config.DEBUG_BIOME_RENDERER) {
-      console.log(`[BiomeRenderer] Removed ${tilesRemoved} tiles. Remaining tiles: ${this.tiles.size}`);
+      logger.log(`[BiomeRenderer] Removed ${tilesRemoved} tiles. Remaining tiles: ${this.tiles.size}`);
     }
   }
 
@@ -133,7 +134,7 @@ export class BiomeRenderer {
 
     this.container.addChild(tile);
     if (Config.DEBUG_BIOME_RENDERER) {
-      console.log(`[BiomeRenderer] Tile (${x},${y}) added for biome ${biome.type}`);
+      logger.log(`[BiomeRenderer] Tile (${x},${y}) added for biome ${biome.type}`);
     }
 
     this.tiles.set(`${x},${y}`, tile);
@@ -260,7 +261,7 @@ export class BiomeRenderer {
     const newAlpha = 0.4 + normalizedLight * 0.6; // Keep alpha between 0.4-1.0
 
     if (Config.DEBUG_BIOME_RENDERER) {
-      console.log(
+      logger.log(
         `[BiomeRenderer] updateLighting: lightLevel=${lightLevel} (normalized=${normalizedLight.toFixed(2)}), alpha=${newAlpha.toFixed(2)}`
       );
     }

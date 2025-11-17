@@ -14,7 +14,7 @@ export function createMockGraphics(): Graphics {
     y: 0,
     alpha: 1,
     visible: true,
-    scale: { x: 1, y: 1, set: (value: number) => {} },
+    scale: { x: 1, y: 1, set: (_value: number) => {} },
     clear: () => mockGraphics,
     beginFill: () => mockGraphics,
     drawCircle: () => mockGraphics,
