@@ -13,6 +13,7 @@ import { MainMenu } from './components/MainMenu';
 import { DeathScreen } from './components/DeathScreen';
 import { AchievementsPanel } from './components/AchievementsPanel';
 import { AchievementNotification } from './components/AchievementNotification';
+import { EventNotification } from './components/EventNotification';
 import { EvolutionControlPanel } from './components/EvolutionControlPanel';
 import { PhylogeneticTreePanel } from './components/PhylogeneticTreePanel';
 import { BiomeLegend } from './components/BiomeLegend';
@@ -22,6 +23,7 @@ import { GameSetupPanel } from './components/GameSetupPanel';
 import { KeyboardShortcutsPanel } from './components/KeyboardShortcutsPanel';
 import { AccessibleGameStatePanel, type GameStateData } from './components/AccessibleGameStatePanel';
 import type { Traits, Species } from '../types/entities';
+import type { GameEvent } from '../events/EventManager';
 import type { TimeControl } from '../core/TimeControl';
 import type { SaveSystem, GameSettings, SavedSimulation, SavedCreature } from '../data/SaveSystem';
 import type { PopulationDataPoint, LineageNode } from '../data/HistoryTracker';
@@ -111,6 +113,7 @@ interface UIState {
   challenges: Challenge[];
   achievementNotifications: Achievement[];
   gameSetupSpecies: SpeciesSetupOption[];
+  currentEvent: GameEvent | null;
 }
 
 export class UIController {
@@ -192,6 +195,7 @@ export class UIController {
         challenges: [],
         achievementNotifications: [],
         gameSetupSpecies: getDefaultSpeciesSetup(),
+        currentEvent: null,
       }));
 
       useEffect(() => {
@@ -316,6 +320,13 @@ export class UIController {
         setState(s => ({
           ...s,
           achievementNotifications: s.achievementNotifications.filter((_, i) => i !== index),
+        }));
+      };
+
+      const handleCloseEventNotification = () => {
+        setState(s => ({
+          ...s,
+          currentEvent: null,
         }));
       };
 
@@ -531,6 +542,12 @@ export class UIController {
               onClose={() => handleCloseAchievementNotification(index)}
             />
           ))}
+
+          {/* Event Notification */}
+          <EventNotification
+            event={state.currentEvent}
+            onClose={handleCloseEventNotification}
+          />
         </>
       );
     };
@@ -671,6 +688,18 @@ export class UIController {
     // Announce to screen readers
     screenReaderAnnouncer.announcePolite(
       `Achievement unlocked: ${achievement.name}! ${achievement.description}`
+    );
+  }
+
+  showEventNotification(event: GameEvent) {
+    this.setState?.(s => ({
+      ...s,
+      currentEvent: event,
+    }));
+
+    // Announce to screen readers
+    screenReaderAnnouncer.announceAssertive(
+      `Event triggered: ${event.name}! ${event.description}`
     );
   }
 

@@ -145,6 +145,8 @@ export class GameLoop {
   private nearMissTracker: NearMissTracker;
   private maxPopulationReached = 0;
   private totalResourcesCollected = 0;
+  private musicPresetChangeHandler: EventListener | null = null;
+  private biomeHighlightHandler: EventListener | null = null;
 
   constructor() {
     this.renderer = new PixiApp();
@@ -193,8 +195,7 @@ export class GameLoop {
     // Setup event callback
     this.eventManager.setEventCallback((event) => {
       this.currentEvent = event;
-      // TODO: Implement showEventNotification in UIController
-      // this.uiController.showEventNotification(event);
+      this.uiController.showEventNotification(event);
       if (Config.DEBUG_GAME_LOOP) {
         console.log('[GameLoop] Event triggered:', event.name);
       }
@@ -344,16 +345,18 @@ export class GameLoop {
     this.uiController.setMusicManagerCallback(() => this.musicManager);
 
     // Setup music preset hotkeys
-    window.addEventListener('musicPresetChange', ((e: CustomEvent<number>) => {
+    this.musicPresetChangeHandler = ((e: CustomEvent<number>) => {
       const presetIndex = e.detail;
       this.musicManager.applyPreset(presetIndex);
-    }) as EventListener);
+    }) as EventListener;
+    window.addEventListener('musicPresetChange', this.musicPresetChangeHandler);
 
     // Setup biome highlight handler
-    window.addEventListener('biomeHighlight', ((e: CustomEvent<string | null>) => {
+    this.biomeHighlightHandler = ((e: CustomEvent<string | null>) => {
       const biomeType = e.detail;
       this.biomeRenderer.setHighlightedBiome(biomeType);
-    }) as EventListener);
+    }) as EventListener;
+    window.addEventListener('biomeHighlight', this.biomeHighlightHandler);
   }
 
   private setupMusicUnlock(): void {
@@ -1501,6 +1504,16 @@ export class GameLoop {
   // Dispose resources
   async dispose(): Promise<void> {
     this.stop();
+
+    // Remove event listeners to prevent memory leaks
+    if (this.musicPresetChangeHandler) {
+      window.removeEventListener('musicPresetChange', this.musicPresetChangeHandler);
+      this.musicPresetChangeHandler = null;
+    }
+    if (this.biomeHighlightHandler) {
+      window.removeEventListener('biomeHighlight', this.biomeHighlightHandler);
+      this.biomeHighlightHandler = null;
+    }
 
     // Save achievement progress before disposing
     try {
