@@ -269,13 +269,13 @@ export class SaveSystem {
       }
 
       // Create a new Genome from the imported data
-      const genome = new (Genome as any)();
-      genome.traits = data.genome.traits;
-      genome.lineage = data.genome.lineage || {
-        generationNumber: 0,
-        parentId: null,
-        mutationHistory: [],
+      const lineage = data.genome.lineage || {
+        generation: 0,
+        lineageId: `lineage-${Date.now()}`,
+        mutations: [],
       };
+      const genome = new Genome(data.genome.traits, lineage);
+      genome.dnaPoints = data.genome.dnaPoints || 0;
 
       return {
         name: data.name || 'Imported Creature',

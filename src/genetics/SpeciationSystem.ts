@@ -163,7 +163,7 @@ export class SpeciationSystem {
           }
         }
 
-        const avgDistance = totalDistance / cluster.length;
+        const avgDistance = cluster.length > 0 ? totalDistance / cluster.length : 0;
 
         if (avgDistance < minAvgDistance) {
           minAvgDistance = avgDistance;
@@ -343,7 +343,8 @@ export class SpeciationSystem {
     for (const [key, value] of Object.entries(traits)) {
       if (typeof value === 'number' && key in species.averageTraits) {
         const oldValue = species.averageTraits[key as keyof typeof species.averageTraits] as number;
-        species.averageTraits[key as keyof typeof species.averageTraits] = oldValue * (1 - alpha) + value * alpha as any;
+        const newValue = oldValue * (1 - alpha) + value * alpha;
+        (species.averageTraits as Record<string, unknown>)[key] = newValue;
       }
     }
   }

@@ -109,7 +109,7 @@ export class Cell {
 
     // Cap maximum velocity
     const magnitude = Math.sqrt(this.velocity.x ** 2 + this.velocity.y ** 2);
-    if (magnitude > Config.MAX_VELOCITY) {
+    if (magnitude > Config.MAX_VELOCITY && magnitude > 0) {
       this.velocity.x = (this.velocity.x / magnitude) * Config.MAX_VELOCITY;
       this.velocity.y = (this.velocity.y / magnitude) * Config.MAX_VELOCITY;
     }

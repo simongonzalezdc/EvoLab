@@ -89,7 +89,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </label>
           <select
             value={localSettings.graphicsQuality}
-            onChange={e => handleChange('graphicsQuality', e.target.value as any)}
+            onChange={e => handleChange('graphicsQuality', e.target.value as 'low' | 'medium' | 'high')}
             style={{
               width: '100%',
               padding: '8px',
@@ -321,7 +321,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             <select
               id="font-size-select"
               value={localSettings.fontSize ?? 'medium'}
-              onChange={e => handleChange('fontSize', e.target.value as any)}
+              onChange={e => handleChange('fontSize', e.target.value as 'small' | 'medium' | 'large' | 'xlarge')}
               style={{
                 width: '100%',
                 padding: '8px',
