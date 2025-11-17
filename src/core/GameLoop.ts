@@ -33,6 +33,8 @@ import { FactionSystem } from './FactionSystem';
 import { EcosystemRegulator } from '../ai/EcosystemRegulator';
 import { PerformanceMonitor } from './PerformanceMonitor';
 import { TraitSynergies } from '../genetics/TraitSynergies';
+import { LeaderboardSystem } from '../achievements/LeaderboardSystem';
+import { NearMissTracker } from '../achievements/NearMissTracker';
 
 const MAX_COMPETITOR_SPECIES = 6;
 
@@ -138,6 +140,10 @@ export class GameLoop {
   private ecosystemRegulator: EcosystemRegulator;
   private currentEvent: GameEvent | null = null;
   private performanceMonitor: PerformanceMonitor;
+  private leaderboardSystem: LeaderboardSystem;
+  private nearMissTracker: NearMissTracker;
+  private maxPopulationReached = 0;
+  private totalResourcesCollected = 0;
 
   constructor() {
     this.renderer = new PixiApp();
@@ -178,6 +184,10 @@ export class GameLoop {
     this.factionSystem = new FactionSystem();
     this.ecosystemRegulator = new EcosystemRegulator();
     this.performanceMonitor = new PerformanceMonitor();
+
+    // Initialize Week 3 systems
+    this.leaderboardSystem = new LeaderboardSystem();
+    this.nearMissTracker = new NearMissTracker();
 
     // Setup event callback
     this.eventManager.setEventCallback((event) => {
@@ -561,6 +571,39 @@ export class GameLoop {
       this.factionSystem.updateProgress('population', stats.population);
       this.factionSystem.updateProgress('diversity', stats.diversity || 0);
       this.factionSystem.updateProgress('biomass', ecosystemStats.biomass);
+
+      // Track max population for leaderboard (Week 3)
+      if (stats.population > this.maxPopulationReached) {
+        this.maxPopulationReached = stats.population;
+      }
+    }
+
+    // Update near-miss tracker (Week 3)
+    if (this.entityManager.playerSpecies) {
+      const playerCells = this.entityManager.playerSpecies.getAllCells();
+
+      // Track near misses for each player cell
+      playerCells.forEach(playerCell => {
+        const nearMissResult = this.nearMissTracker.update(playerCell, allCells, deltaTime);
+
+        // Award bonus DNA for successful escapes
+        if (nearMissResult.bonusDNA > 0) {
+          playerCell.genome.dnaPoints += nearMissResult.bonusDNA;
+
+          // Show particles for the escape bonus
+          this.renderer.particleSystem.createDNASparkles(
+            playerCell.position.x,
+            playerCell.position.y,
+            nearMissResult.bonusDNA
+          );
+
+          if (Config.DEBUG_GAME_LOOP) {
+            console.log(
+              `[NearMiss] Escape bonus: +${nearMissResult.bonusDNA.toFixed(1)} DNA (${nearMissResult.totalEscapes} escapes)`
+            );
+          }
+        }
+      });
     }
 
     // Update performance monitoring (Week 4)
@@ -614,6 +657,27 @@ export class GameLoop {
       // Check for species extinction
       if (this.entityManager.playerSpecies.isExtinct()) {
         const stats = this.entityManager.playerSpecies.getStats();
+
+        // Record run in leaderboard (Week 3)
+        const totalDNA = this.entityManager.playerSpecies.getAllCells()
+          .reduce((sum, cell) => sum + cell.genome.dnaPoints, 0);
+
+        const leaderboardResult = this.leaderboardSystem.addEntry({
+          generation: stats.generation,
+          survivalTime: stats.averageSurvivalTime,
+          dnaCollected: totalDNA,
+          resourcesCollected: stats.totalResourcesCollected,
+          maxPopulation: this.maxPopulationReached,
+          deathCause: 'atp', // Species went extinct (could also be 'health' or 'ongoing')
+        });
+
+        if (Config.DEBUG_GAME_LOOP) {
+          console.log(
+            `[Leaderboard] Run recorded - Rank: ${leaderboardResult.rank}/10` +
+            (leaderboardResult.isNewRecord ? ' 🏆 NEW RECORD!' : '')
+          );
+        }
+
         this.uiController.showDeathScreen(
           stats.generation,
           stats.averageSurvivalTime,

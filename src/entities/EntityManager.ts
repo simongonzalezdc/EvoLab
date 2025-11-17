@@ -92,7 +92,7 @@ export class EntityManager {
     return cell;
   }
 
-  // Spawn resources (glucose)
+  // Spawn resources (glucose) - Week 3: with golden resource chance
   spawnResources(): void {
     const halfWidth = Config.LAKE_WIDTH / 2;
     const halfHeight = Config.LAKE_HEIGHT / 2;
@@ -101,10 +101,15 @@ export class EntityManager {
       const x = Math.random() * Config.LAKE_WIDTH - halfWidth;
       const y = Math.random() * Config.LAKE_HEIGHT - halfHeight;
 
-      const sprite = this.renderer.createCircle(x, y, Config.GLUCOSE_RADIUS, Config.GLUCOSE_COLOR);
+      // Week 3: 2% chance for golden resource (10x value)
+      const isGolden = Math.random() < Config.GOLDEN_RESOURCE_CHANCE;
+      const rarity = isGolden ? 'golden' : 'common';
+      const color = isGolden ? 0xffd700 : Config.GLUCOSE_COLOR; // Gold color for golden resources
+
+      const sprite = this.renderer.createCircle(x, y, Config.GLUCOSE_RADIUS, color);
       this.renderer.addToWorld(sprite);
 
-      const resource = new Resource(`glucose-${i}`, x, y, 'glucose', sprite);
+      const resource = new Resource(`glucose-${i}`, x, y, 'glucose', sprite, rarity);
       this.resources.set(resource.id, resource);
     }
   }
