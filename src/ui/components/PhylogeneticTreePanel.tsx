@@ -1,6 +1,7 @@
 // Phylogenetic tree visualization panel
 
 import React, { useEffect, useRef } from 'react';
+import FocusLock from 'react-focus-lock';
 import * as d3 from 'd3';
 import type { Species } from '../../types/entities';
 
@@ -20,6 +21,19 @@ interface Props {
 
 export const PhylogeneticTreePanel: React.FC<Props> = ({ phylogeneticTree, species, onClose }) => {
   const svgRef = useRef<SVGSVGElement>(null);
+
+  // Handle ESC key to close
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
 
   useEffect(() => {
     if (!svgRef.current || phylogeneticTree.length === 0) return;
@@ -163,6 +177,9 @@ export const PhylogeneticTreePanel: React.FC<Props> = ({ phylogeneticTree, speci
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="phylogenetic-title"
       style={{
         position: 'fixed',
         top: '50%',
@@ -178,8 +195,9 @@ export const PhylogeneticTreePanel: React.FC<Props> = ({ phylogeneticTree, speci
         overflow: 'auto',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-        <h2 style={{ color: '#4caf50', margin: 0 }}>Phylogenetic Tree</h2>
+      <FocusLock returnFocus>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <h2 id="phylogenetic-title" style={{ color: '#4caf50', margin: 0 }}>Phylogenetic Tree</h2>
         <button
           onClick={onClose}
           style={{
@@ -209,6 +227,7 @@ export const PhylogeneticTreePanel: React.FC<Props> = ({ phylogeneticTree, speci
           Numbers in parentheses show current population size.
         </p>
       </div>
+      </FocusLock>
     </div>
   );
 };

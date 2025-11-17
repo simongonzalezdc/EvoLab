@@ -1,4 +1,5 @@
 import React from 'react';
+import FocusLock from 'react-focus-lock';
 import type { SpeciesSetupOption } from '../../types/game';
 
 interface GameSetupPanelProps {
@@ -28,10 +29,28 @@ export const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
   onStart,
   onCancel,
 }) => {
+  // Handle ESC key to close
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCancel();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onCancel]);
+
   if (!isOpen) return null;
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="gamesetup-title"
       style={{
         position: 'fixed',
         inset: 0,
@@ -43,19 +62,20 @@ export const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
         padding: '20px',
       }}
     >
-      <div
-        style={{
-          width: 'min(720px, 100%)',
-          maxHeight: '90vh',
-          overflowY: 'auto',
-          background: '#0f172a',
-          border: '2px solid #22d3ee',
-          borderRadius: '12px',
-          padding: '24px',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.45)',
-        }}
-      >
-        <h2 style={{ margin: 0, color: '#22d3ee' }}>Simulation Setup</h2>
+      <FocusLock returnFocus>
+        <div
+          style={{
+            width: 'min(720px, 100%)',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            background: '#0f172a',
+            border: '2px solid #22d3ee',
+            borderRadius: '12px',
+            padding: '24px',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.45)',
+          }}
+        >
+          <h2 id="gamesetup-title" style={{ margin: 0, color: '#22d3ee' }}>Simulation Setup</h2>
         <p style={{ color: '#cbd5f5', marginTop: '8px', marginBottom: '16px', lineHeight: 1.4 }}>
           Choose how many rival species will appear and what ecological role they play. Starting a new
           simulation will reset your current progress.
@@ -182,7 +202,7 @@ export const GameSetupPanel: React.FC<GameSetupPanelProps> = ({
             </button>
           </div>
         </div>
-      </div>
+      </FocusLock>
     </div>
   );
 };

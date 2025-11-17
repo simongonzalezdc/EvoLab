@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import FocusLock from 'react-focus-lock';
 import type { SaveSystem, SavedSimulation, SavedCreature } from '../../data/SaveSystem';
 
 interface SaveLoadPanelProps {
@@ -17,6 +18,19 @@ export const SaveLoadPanel: React.FC<SaveLoadPanelProps> = ({
   const [tab, setTab] = useState<'simulations' | 'creatures'>('simulations');
   const [simulations, setSimulations] = useState<SavedSimulation[]>([]);
   const [creatures, setCreatures] = useState<SavedCreature[]>([]);
+
+  // Handle ESC key to close
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
 
   useEffect(() => {
     loadData();
@@ -98,6 +112,9 @@ export const SaveLoadPanel: React.FC<SaveLoadPanelProps> = ({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="saveload-title"
       style={{
         position: 'fixed',
         top: 0,
@@ -112,20 +129,21 @@ export const SaveLoadPanel: React.FC<SaveLoadPanelProps> = ({
       }}
       onClick={onClose}
     >
-      <div
-        style={{
-          background: '#1a1a1a',
-          border: '2px solid #333',
-          borderRadius: '12px',
-          padding: '30px',
-          maxWidth: '800px',
-          width: '90%',
-          maxHeight: '80vh',
-          overflowY: 'auto',
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        <h2 style={{ margin: '0 0 20px 0', color: '#fff', fontSize: '24px' }}>Load Save</h2>
+      <FocusLock returnFocus>
+        <div
+          style={{
+            background: '#1a1a1a',
+            border: '2px solid #333',
+            borderRadius: '12px',
+            padding: '30px',
+            maxWidth: '800px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflowY: 'auto',
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          <h2 id="saveload-title" style={{ margin: '0 0 20px 0', color: '#fff', fontSize: '24px' }}>Load Save</h2>
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
@@ -354,7 +372,8 @@ export const SaveLoadPanel: React.FC<SaveLoadPanelProps> = ({
             Close
           </button>
         </div>
-      </div>
+        </div>
+      </FocusLock>
     </div>
   );
 };

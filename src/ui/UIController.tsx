@@ -19,6 +19,7 @@ import { BiomeLegend } from './components/BiomeLegend';
 import { ZoomControls } from './components/ZoomControls';
 import { MusicDevTools } from './components/MusicDevTools';
 import { GameSetupPanel } from './components/GameSetupPanel';
+import { KeyboardShortcutsPanel } from './components/KeyboardShortcutsPanel';
 import type { Traits, Species } from '../types/entities';
 import type { TimeControl } from '../core/TimeControl';
 import type { SaveSystem, GameSettings, SavedSimulation, SavedCreature } from '../data/SaveSystem';
@@ -80,6 +81,7 @@ interface UIState {
   showBiomeLegend: boolean;
   showMusicDevTools: boolean;
   showGameSetup: boolean;
+  showKeyboardShortcuts: boolean;
   deathCause: 'atp' | 'health';
   currentTraits: Traits | null;
   physicsEnabled: boolean;
@@ -156,6 +158,7 @@ export class UIController {
         showBiomeLegend: true, // Default: visible
         showMusicDevTools: false,
         showGameSetup: !hasSeenSetup(),
+        showKeyboardShortcuts: false,
         deathCause: 'atp',
         currentTraits: null,
         physicsEnabled: false,
@@ -189,6 +192,17 @@ export class UIController {
             setState(s => ({ ...s, settings }));
           }
         });
+
+        // Global keyboard handler for Shift+?
+        const handleGlobalKeyPress = (e: KeyboardEvent) => {
+          if (e.shiftKey && e.key === '?') {
+            e.preventDefault();
+            setState(s => ({ ...s, showKeyboardShortcuts: !s.showKeyboardShortcuts }));
+          }
+        };
+
+        document.addEventListener('keydown', handleGlobalKeyPress);
+        return () => document.removeEventListener('keydown', handleGlobalKeyPress);
       }, []);
 
       const handleApplyModifications = (mods: Partial<Traits>) => {
@@ -464,6 +478,13 @@ export class UIController {
               phylogeneticTree={state.phylogeneticTree}
               species={state.species}
               onClose={() => setState(s => ({ ...s, showPhylogeneticTree: false }))}
+            />
+          )}
+
+          {/* Keyboard Shortcuts Panel */}
+          {state.showKeyboardShortcuts && (
+            <KeyboardShortcutsPanel
+              onClose={() => setState(s => ({ ...s, showKeyboardShortcuts: false }))}
             />
           )}
 
