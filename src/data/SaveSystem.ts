@@ -1,6 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 import { Genome } from '../genetics/Genome';
 import type { Traits } from '../types/entities';
+import { logger } from '../utils/Logger';
 
 export interface SavedSimulation {
   id?: number;

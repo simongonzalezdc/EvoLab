@@ -116,4 +116,87 @@ export class TraitSystem {
   static canAffordModification(currentDNA: number, cost: number): boolean {
     return currentDNA >= cost;
   }
+
+  // Calculate metabolic cost based on traits
+  static calculateMetabolicCost(traits: Traits): number {
+    let cost = 0;
+
+    // Base cost from size
+    cost += traits.size * 2;
+
+    // Special abilities increase cost
+    cost += traits.toxinStrength * 3;
+    cost += traits.camouflage * 2;
+    cost += traits.electricShock * 4;
+    cost += traits.speedBurstPower * 1.5;
+
+    // Armor increases cost
+    cost += traits.armor * 1.5;
+
+    // Photosynthesis reduces cost
+    cost -= traits.photosynthesis * 5;
+
+    // Ensure minimum cost
+    return Math.max(1, cost);
+  }
+
+  // Calculate overall fitness score
+  static calculateFitness(traits: Traits): number {
+    let fitness = 0;
+
+    // Survival traits
+    fitness += traits.health / 10;
+    fitness += traits.atp / 10;
+    fitness += traits.armor * 2;
+    fitness += traits.regeneration * 3;
+
+    // Combat traits
+    fitness += traits.aggression;
+    fitness += traits.size;
+
+    // Sensory traits
+    fitness += traits.visionRange / 50;
+    fitness += traits.chemotaxis * 2;
+    fitness += traits.hearing * 2;
+
+    // Resource gathering
+    fitness += traits.absorptionRate * 5;
+    fitness += traits.digestionEfficiency * 5;
+
+    // Special abilities
+    fitness += traits.toxinStrength * 2;
+    fitness += traits.speedBurstPower * 2;
+    fitness += traits.camouflage * 2;
+    fitness += traits.electricShock * 2;
+
+    // Environmental adaptation
+    fitness += traits.temperatureTolerance;
+    fitness += traits.toxinResistance;
+    fitness += traits.pressureResistance;
+
+    return Math.max(0, fitness);
+  }
+
+  // Calculate combat strength
+  static calculateCombatStrength(traits: Traits): number {
+    let strength = 0;
+
+    // Base strength from size and aggression
+    strength += traits.size * 3;
+    strength += traits.aggression * 2;
+
+    // Physical attributes
+    strength += traits.armor * 2;
+    strength += traits.health / 20;
+
+    // Special combat abilities
+    strength += traits.toxinStrength * 4;
+    strength += traits.electricShock * 4;
+    strength += traits.speedBurstPower * 1.5;
+
+    // Intelligence provides tactical advantage
+    strength += traits.intelligence * 1.5;
+
+    return Math.max(1, strength);
+  }
 }

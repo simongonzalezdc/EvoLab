@@ -11,7 +11,7 @@ describe('MutationEngine', () => {
   let mutationEngine: MutationEngine;
 
   beforeEach(() => {
-    mutationEngine = new MutationEngine();
+    mutationEngine = new MutationEngine({ mutationRate: 1.0, mutationMagnitude: 0.5, beneficialBias: 0.5 });
   });
 
   it('should create a mutation engine instance', () => {
@@ -22,19 +22,13 @@ describe('MutationEngine', () => {
     const genome = Genome.createDefault();
     const originalSize = genome.traits.size;
 
-    // Set high mutation rate to ensure mutations occur
-    mutationEngine.setConfig({
-      mutationRate: 1.0, // 100% chance
-      mutationMagnitude: 0.5,
-      beneficialBias: 0.5,
-    });
-
-    // Apply mutations multiple times
+    // Apply mutations multiple times to ensure at least one occurs
     let mutationOccurred = false;
     for (let i = 0; i < 10; i++) {
-      const mutated = mutationEngine.mutate(Genome.clone(genome));
-      if (mutated.traits.size !== originalSize) {
+      const result = mutationEngine.mutate(genome.traits);
+      if (result.mutatedTraits.size !== originalSize) {
         mutationOccurred = true;
+        expect(result.mutations.length).toBeGreaterThan(0);
         break;
       }
     }
@@ -43,35 +37,25 @@ describe('MutationEngine', () => {
   });
 
   it('should respect mutation rate of 0', () => {
+    const noMutationEngine = new MutationEngine({ mutationRate: 0.0, mutationMagnitude: 1.0, beneficialBias: 0.5 });
     const genome = Genome.createDefault();
-    const originalTraits = { ...genome.traits };
+    const originalSize = genome.traits.size;
 
-    mutationEngine.setConfig({
-      mutationRate: 0.0, // No mutations
-      mutationMagnitude: 1.0,
-      beneficialBias: 0.5,
-    });
+    const result = noMutationEngine.mutate(genome.traits);
 
-    const mutated = mutationEngine.mutate(Genome.clone(genome));
-
-    // All traits should be identical
-    expect(mutated.traits.size).toBe(originalTraits.size);
-    expect(mutated.traits.speed).toBe(originalTraits.speed);
+    // No traits should have changed
+    expect(result.mutatedTraits.size).toBe(originalSize);
+    expect(result.mutations.length).toBe(0);
   });
 
   it('should not mutate with 0 mutation rate over multiple attempts', () => {
+    const noMutationEngine = new MutationEngine({ mutationRate: 0.0, mutationMagnitude: 1.0, beneficialBias: 0.5 });
     const genome = Genome.createDefault();
-
-    mutationEngine.setConfig({
-      mutationRate: 0.0,
-      mutationMagnitude: 1.0,
-      beneficialBias: 0.5,
-    });
 
     // Try 100 times
     for (let i = 0; i < 100; i++) {
-      const mutated = mutationEngine.mutate(Genome.clone(genome));
-      expect(mutated.traits.size).toBe(genome.traits.size);
+      const result = noMutationEngine.mutate(genome.traits);
+      expect(result.mutations.length).toBe(0);
     }
   });
 });
