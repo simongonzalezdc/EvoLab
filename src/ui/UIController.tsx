@@ -20,6 +20,7 @@ import { ZoomControls } from './components/ZoomControls';
 import { MusicDevTools } from './components/MusicDevTools';
 import { GameSetupPanel } from './components/GameSetupPanel';
 import { KeyboardShortcutsPanel } from './components/KeyboardShortcutsPanel';
+import { AccessibleGameStatePanel, type GameStateData } from './components/AccessibleGameStatePanel';
 import type { Traits, Species } from '../types/entities';
 import type { TimeControl } from '../core/TimeControl';
 import type { SaveSystem, GameSettings, SavedSimulation, SavedCreature } from '../data/SaveSystem';
@@ -84,6 +85,8 @@ interface UIState {
   showMusicDevTools: boolean;
   showGameSetup: boolean;
   showKeyboardShortcuts: boolean;
+  showAccessibleGameState: boolean;
+  gameStateData: GameStateData | null;
   deathCause: 'atp' | 'health';
   currentTraits: Traits | null;
   physicsEnabled: boolean;
@@ -163,6 +166,8 @@ export class UIController {
         showMusicDevTools: false,
         showGameSetup: !hasSeenSetup(),
         showKeyboardShortcuts: false,
+        showAccessibleGameState: false,
+        gameStateData: null,
         deathCause: 'atp',
         currentTraits: null,
         physicsEnabled: false,
@@ -387,6 +392,15 @@ export class UIController {
               onZoomIn={() => this.onZoomIn?.()}
               onZoomOut={() => this.onZoomOut?.()}
               onResetZoom={() => this.onResetZoom?.()}
+            />
+          )}
+
+          {/* Accessible Game State Panel */}
+          {state.gameStateData && (
+            <AccessibleGameStatePanel
+              gameState={state.gameStateData}
+              isVisible={state.showAccessibleGameState}
+              onToggle={() => setState(s => ({ ...s, showAccessibleGameState: !s.showAccessibleGameState }))}
             />
           )}
 
@@ -736,6 +750,13 @@ export class UIController {
       ...s,
       currentDNA,
       targetDNA,
+    }));
+  }
+
+  updateGameStateData(gameState: GameStateData) {
+    this.setState?.(s => ({
+      ...s,
+      gameStateData: gameState,
     }));
   }
 
