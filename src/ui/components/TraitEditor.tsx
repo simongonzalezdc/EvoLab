@@ -201,10 +201,8 @@ export const TraitEditor: React.FC<TraitEditorProps> = ({
             Maximum change per trait: ±2 points • Cost: 2 DNA points per unit
           </div>
         </div>
-      </FocusLock>
-    </div>
 
-      <style>{`
+        <style>{`
         .trait-editor-overlay {
           position: fixed;
           top: 0;
@@ -354,6 +352,8 @@ export const TraitEditor: React.FC<TraitEditorProps> = ({
           text-align: center;
         }
       `}</style>
+        </div>
+      </FocusLock>
     </div>
   );
 };

@@ -10,6 +10,20 @@ export default defineConfig({
   build: {
     target: 'es2020',
     outDir: 'dist',
-    sourcemap: true,
+    // Disable sourcemaps in production to reduce bundle size
+    sourcemap: false,
+    // Add bundle size limits
+    chunkSizeWarningLimit: 500,
+    // Configure code splitting for better caching
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'zustand'],
+          'vendor-graphics': ['pixi.js', 'd3'],
+          'vendor-audio': ['tone'],
+          'vendor-data': ['dexie'],
+        },
+      },
+    },
   },
 });

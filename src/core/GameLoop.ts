@@ -36,6 +36,7 @@ import { TraitSynergies } from '../genetics/TraitSynergies';
 import { LeaderboardSystem } from '../achievements/LeaderboardSystem';
 import { NearMissTracker } from '../achievements/NearMissTracker';
 import { gameStateAnnouncer } from '../utils/GameStateAnnouncer';
+import { logger } from '../utils/Logger';
 
 const MAX_COMPETITOR_SPECIES = 6;
 
@@ -197,7 +198,7 @@ export class GameLoop {
       this.currentEvent = event;
       this.uiController.showEventNotification(event);
       if (Config.DEBUG_GAME_LOOP) {
-        console.log('[GameLoop] Event triggered:', event.name);
+        logger.log('[GameLoop] Event triggered:', event.name);
       }
     });
 
@@ -372,7 +373,7 @@ export class GameLoop {
         await this.musicManager.enable();
         this.hasUnlockedMusic = true;
       } catch (error) {
-        console.warn('[GameLoop] Failed to unlock music on interaction:', error);
+        logger.warn('[GameLoop] Failed to unlock music on interaction:', error);
         this.hasUnlockedMusic = false;
         this.setupMusicUnlock();
       }
@@ -413,10 +414,10 @@ export class GameLoop {
     try {
       // Don't await this to avoid blocking on audio context
       this.musicManager.initialize().catch(error => {
-        console.warn('[GameLoop] Music manager initialization failed (expected on first load):', error);
+        logger.warn('[GameLoop] Music manager initialization failed (expected on first load):', error);
       });
     } catch (error) {
-      console.error('[GameLoop] ERROR: Failed to start music manager initialization:', error);
+      logger.error('[GameLoop] ERROR: Failed to start music manager initialization:', error);
     }
 
     // Load achievement progress
@@ -429,7 +430,7 @@ export class GameLoop {
       // Add biome layer to renderer (underneath entities)
       this.renderer.addBiomeLayer(this.biomeRenderer.getContainer());
     } catch (error) {
-      console.error('[GameLoop] ERROR: Failed to add biome layer:', error);
+      logger.error('[GameLoop] ERROR: Failed to add biome layer:', error);
       throw error;
     }
 
@@ -437,7 +438,7 @@ export class GameLoop {
       // Create player species (species-level gameplay)
       this.entityManager.createPlayerSpecies();
     } catch (error) {
-      console.error('[GameLoop] ERROR: Failed to create player species:', error);
+      logger.error('[GameLoop] ERROR: Failed to create player species:', error);
       throw error;
     }
 
@@ -448,7 +449,7 @@ export class GameLoop {
         this.renderer.updateCamera(speciesCenter.x, speciesCenter.y);
       }
     } catch (error) {
-      console.error('[GameLoop] ERROR: Failed to initialize camera:', error);
+      logger.error('[GameLoop] ERROR: Failed to initialize camera:', error);
       throw error;
     }
 
@@ -456,7 +457,7 @@ export class GameLoop {
       // Spawn resources
       this.entityManager.spawnResources();
     } catch (error) {
-      console.error('[GameLoop] ERROR: Failed to spawn resources:', error);
+      logger.error('[GameLoop] ERROR: Failed to spawn resources:', error);
       throw error;
     }
 
@@ -625,7 +626,7 @@ export class GameLoop {
           gameStateAnnouncer.announceCombat('escaped');
 
           if (Config.DEBUG_GAME_LOOP) {
-            console.log(
+            logger.log(
               `[NearMiss] Escape bonus: +${nearMissResult.bonusDNA.toFixed(1)} DNA (${nearMissResult.totalEscapes} escapes)`
             );
           }
@@ -699,7 +700,7 @@ export class GameLoop {
         });
 
         if (Config.DEBUG_GAME_LOOP) {
-          console.log(
+          logger.log(
             `[Leaderboard] Run recorded - Rank: ${leaderboardResult.rank}/10` +
             (leaderboardResult.isNewRecord ? ' 🏆 NEW RECORD!' : '')
           );
@@ -886,7 +887,7 @@ export class GameLoop {
       const speciesCells = this.entityManager.playerSpecies.getAllCells();
       if (speciesCells.length === 0) return 0;
 
-      // PERFORMANCE FIX: Sample only a subset of cells to avoid O(n²) complexity
+      // PERFORMANCE OPTIMIZATION: Sample only a subset of cells to avoid O(n²) complexity
       // For large populations, check only 5-10 representative cells instead of all
       const sampleSize = Math.min(10, speciesCells.length);
       const sampledCells = speciesCells.length <= sampleSize
@@ -899,16 +900,27 @@ export class GameLoop {
       const allCells = this.entityManager.getAllCells();
       const otherCells = allCells.filter(cell => !speciesCells.includes(cell));
 
+      // OPTIMIZATION: If there are too many other cells, sample them too
+      const maxOtherCellsToCheck = 50;
+      const cellsToCheck = otherCells.length > maxOtherCellsToCheck
+        ? otherCells.filter((_, i) => i % Math.ceil(otherCells.length / maxOtherCellsToCheck) === 0)
+        : otherCells;
+
       let totalThreatLevel = 0;
+      const detectionRange = 100;
+      const detectionRangeSq = detectionRange * detectionRange;
+      const maxThreatsPerCell = 5; // Early exit optimization
 
       // For each sampled cell, check only nearby threats using distance threshold
-      sampledCells.forEach(cell => {
-        let nearbyThreats = 0;
-        const detectionRange = 100;
-        const detectionRangeSq = detectionRange * detectionRange; // Avoid sqrt by comparing squared distances
+      for (const cell of sampledCells) {
+        if (!cell) continue;
 
-        otherCells.forEach(otherCell => {
-          if (!cell || !otherCell) return;
+        let nearbyThreats = 0;
+
+        // Early exit when we've found enough threats for this cell
+        for (const otherCell of cellsToCheck) {
+          if (!otherCell || nearbyThreats >= maxThreatsPerCell) break;
+
           // Quick distance check using squared distance (faster than sqrt)
           const dx = cell.position.x - otherCell.position.x;
           const dy = cell.position.y - otherCell.position.y;
@@ -917,10 +929,10 @@ export class GameLoop {
           if (distanceSq < detectionRangeSq && otherCell.traits.aggression > 6) {
             nearbyThreats++;
           }
-        });
+        }
 
         totalThreatLevel += nearbyThreats;
-      });
+      }
 
       return Math.min(1, totalThreatLevel / (sampledCells.length * 3)); // Normalize to 0-1 range
     }
@@ -1391,7 +1403,7 @@ export class GameLoop {
 
       this.start();
     } catch (error) {
-      console.error('Failed to load simulation:', error);
+      logger.error('Failed to load simulation:', error);
       alert('Failed to load simulation');
     }
   }
@@ -1430,7 +1442,7 @@ export class GameLoop {
         this.applySettings(defaultSettings);
       }
     } catch (error) {
-      console.error('Failed to load settings:', error);
+      logger.error('Failed to load settings:', error);
       // Apply defaults on error
       const defaultSettings = this.saveSystem.getDefaultSettings();
       this.currentSettings = defaultSettings;
@@ -1452,7 +1464,7 @@ export class GameLoop {
 
     // Save settings
     this.saveSystem.saveSettings(settings).catch(err => {
-      console.error('Failed to save settings:', err);
+      logger.error('Failed to save settings:', err);
     });
   }
 
@@ -1497,7 +1509,7 @@ export class GameLoop {
       const achievementData = this.achievementSystem.exportProgress();
       await this.saveSystem.saveAchievements(achievementData);
     } catch (error) {
-      console.error('Auto-save failed:', error);
+      logger.error('Auto-save failed:', error);
     }
   }
 
@@ -1520,7 +1532,7 @@ export class GameLoop {
       const achievementData = this.achievementSystem.exportProgress();
       await this.saveSystem.saveAchievements(achievementData);
     } catch (error) {
-      console.error('Failed to save achievements on exit:', error);
+      logger.error('Failed to save achievements on exit:', error);
     }
 
     this.entityManager.dispose();

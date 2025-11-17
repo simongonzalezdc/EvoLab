@@ -3,6 +3,7 @@
 import { PerlinNoise } from './PerlinNoise';
 import { getBiomeColorFromAttributes } from './BiomeColor';
 import { Config } from '../core/Config';
+import { logger } from '../utils/Logger';
 
 export enum BiomeType {
   SHALLOW_WARM = 'shallow_warm',
@@ -101,7 +102,7 @@ export class BiomeGenerator {
 
     // Debug logging
     if (Config.DEBUG_AUTO_PILOT) {
-      console.log(`[BiomeGenerator] Biome at (${x},${y}): ${type}, temp=${temperature.toFixed(1)}, depth=${depth.toFixed(1)}, color=0x${color.toString(16).padStart(6, '0')}`);
+      logger.log(`[BiomeGenerator] Biome at (${x},${y}): ${type}, temp=${temperature.toFixed(1)}, depth=${depth.toFixed(1)}, color=0x${color.toString(16).padStart(6, '0')}`);
     }
 
     return {

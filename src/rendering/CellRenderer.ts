@@ -230,7 +230,7 @@ export class CellRenderer {
         this.drawCamouflageShape(graphic, radius, color, traits.camouflage);
         break;
 
-      default:
+      default: {
         // Balanced traits = standard circle
         graphic.circle(0, 0, radius);
         graphic.fill(color);
@@ -242,6 +242,7 @@ export class CellRenderer {
         graphic.circle(0, 0, radius);
         graphic.stroke({ width: outlineWidth, color: outlineColor, alpha: 0.5 });
         break;
+      }
     }
   }
 

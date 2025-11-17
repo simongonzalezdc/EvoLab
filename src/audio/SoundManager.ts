@@ -98,7 +98,7 @@ export class SoundManager {
         this.noiseSynth.triggerAttackRelease('32n', now);
         break;
 
-      case 'combo':
+      case 'combo': {
         // Escalating sound for combos
         const comboNotes = ['C5', 'E5', 'G5', 'C6'];
         comboNotes.forEach((note, i) => {
@@ -106,8 +106,9 @@ export class SoundManager {
         });
         this.metalSynth.triggerAttackRelease('8n', now);
         break;
+      }
 
-      case 'levelup':
+      case 'levelup': {
         // Triumphant fanfare for evolution
         const fanfareNotes = ['C4', 'E4', 'G4', 'C5', 'E5'];
         fanfareNotes.forEach((note, i) => {
@@ -115,6 +116,7 @@ export class SoundManager {
         });
         this.membraneSynth.triggerAttackRelease('C2', '4n', now);
         break;
+      }
 
       case 'danger':
         // Low growl/rumble for danger
@@ -122,15 +124,16 @@ export class SoundManager {
         this.noiseSynth.triggerAttackRelease('8n', now);
         break;
 
-      case 'death':
+      case 'death': {
         // Descending sound for death
         const deathNotes = ['E4', 'D4', 'C4', 'B3', 'A3'];
         deathNotes.forEach((note, i) => {
           this.synth.triggerAttackRelease(note, '8n', now + i * 0.08, intensity * 0.6);
         });
         break;
+      }
 
-      case 'victory':
+      case 'victory': {
         // Achievement unlocked sound
         const victoryNotes = ['C5', 'E5', 'G5', 'E5', 'C6'];
         victoryNotes.forEach((note, i) => {
@@ -138,6 +141,7 @@ export class SoundManager {
         });
         this.metalSynth.triggerAttackRelease('4n', now + 0.2);
         break;
+      }
 
       case 'transition':
         // Ethereal shimmer for biome transitions
