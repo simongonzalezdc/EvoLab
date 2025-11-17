@@ -28,7 +28,14 @@ export const Config = {
   // Auto-pilot settings
   AUTO_PILOT_HUNGER_THRESHOLD: 0.9, // Start seeking food at 90% ATP
   AUTO_PILOT_STARVATION_WINDOW_SECONDS: 5, // Project ATP 5 seconds ahead
+
+  // Debug settings - set to true to enable detailed logging
   DEBUG_AUTO_PILOT: false, // Enable debug logging for auto-pilot
+  DEBUG_GAME_LOOP: false, // Enable debug logging for game loop initialization
+  DEBUG_RENDERER: false, // Enable debug logging for PixiApp renderer
+  DEBUG_PLAYER_SPECIES: false, // Enable debug logging for player species creation
+  DEBUG_EVOLUTION: false, // Enable debug logging for evolution events
+  DEBUG_AUDIO: false, // Enable debug logging for audio/music system
 
   // Resource settings
   GLUCOSE_COUNT: 60, // Increased from 40 to match larger map size
@@ -36,6 +43,8 @@ export const Config = {
   GLUCOSE_COLOR: 0xffd700,
   GLUCOSE_RESPAWN_TIME: 8000, // Reduced from 10000 - faster respawn
   RESOURCE_COLLECTION_RANGE: 30, // Increased from 25 - easier to collect
+  GOLDEN_RESOURCE_CHANCE: 0.02, // 2% chance for golden resource (10x value)
+  GOLDEN_RESOURCE_DNA_MULTIPLIER: 10, // 10x DNA from golden resources
 
   // Lake environment settings
   LAKE_WIDTH: 3000, // Increased from 2000 for more exploration space
@@ -56,6 +65,8 @@ export const Config = {
   DNA_COST_PER_TRAIT_CHANGE: 2, // DNA points per unit change in traits
   DNA_FROM_SURVIVAL_TIME: 0.1, // DNA points per second of survival
   DNA_FROM_GLUCOSE: 0.05, // DNA points per glucose collected
+  SUPER_MUTATION_CHANCE: 0.10, // 10% chance for 2x mutation magnitude (dopamine boost)
+  SUPER_MUTATION_MULTIPLIER: 2.0, // Multiplier for super mutations
 
   // Day/Night cycle settings
   DAY_NIGHT_START_TIME: 12, // Start at noon (hour 0-24)
@@ -86,6 +97,12 @@ export const Config = {
 
   // Save system settings
   AUTO_SAVE_INTERVAL_MINUTES: 5, // Auto-save every 5 minutes
+
+  // Sound effects settings
+  SOUND_EFFECTS_ENABLED: true, // Enable sound effects by default
+  SOUND_EFFECTS_VOLUME: 0.5, // Volume 0-1
+  DANGER_SOUND_THRESHOLD: 150, // Distance threshold for danger sounds
+  LOW_ATP_WARNING_THRESHOLD: 0.2, // Play warning at 20% ATP
 
   // Reproduction requirements
   REPRODUCTION_ATP_THRESHOLD: 70, // % of max ATP required

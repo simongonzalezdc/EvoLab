@@ -6,6 +6,11 @@ import { Resource } from '../entities/Resource';
 import { BiomeGenerator, BiomeData } from '../environment/BiomeGenerator';
 import { Config } from './Config';
 
+interface Vector2D {
+  x: number;
+  y: number;
+}
+
 export class AutoPilot {
   private biomeGenerator: BiomeGenerator;
   // Use a Map to store per-cell wander state
@@ -175,6 +180,58 @@ export class AutoPilot {
     direction.x = wanderState.direction.x;
     direction.y = wanderState.direction.y;
     return direction;
+  }
+
+  // Assess nearby threats and determine if cell should flee
+  private assessThreats(player: Cell, allCells: Cell[]): {
+    shouldFlee: boolean;
+    threatCount: number;
+    threatCenter: Vector2D;
+    powerRatio: number;
+  } {
+    const detectionRange = 200;
+    const threats: Cell[] = [];
+    let totalThreatPower = 0;
+    const playerPower = player.traits.size * (1 + player.traits.armor * 0.5);
+
+    // Find all nearby threats
+    allCells.forEach(cell => {
+      if (cell.id === player.id) return;
+
+      const distance = Math.sqrt(
+        Math.pow(cell.position.x - player.position.x, 2) +
+        Math.pow(cell.position.y - player.position.y, 2)
+      );
+
+      if (distance < detectionRange) {
+        // Consider as threat if larger, more aggressive, or has more combat traits
+        const cellPower = cell.traits.size * (1 + cell.traits.armor * 0.5);
+        const isThreat = cellPower > playerPower * 0.7 || cell.traits.aggression > 5;
+
+        if (isThreat) {
+          threats.push(cell);
+          totalThreatPower += cellPower;
+        }
+      }
+    });
+
+    // Calculate threat center (average position of threats)
+    let threatCenter = { x: player.position.x, y: player.position.y };
+    if (threats.length > 0) {
+      threatCenter.x = threats.reduce((sum, t) => sum + t.position.x, 0) / threats.length;
+      threatCenter.y = threats.reduce((sum, t) => sum + t.position.y, 0) / threats.length;
+    }
+
+    // Decide if should flee: outnumbered (3+ threats) OR outmatched (total power > 2x player power)
+    const powerRatio = totalThreatPower / playerPower;
+    const shouldFlee = threats.length >= 3 || powerRatio > 2.0;
+
+    return {
+      shouldFlee,
+      threatCount: threats.length,
+      threatCenter,
+      powerRatio,
+    };
   }
 
   private findNearestPredator(player: Cell, allCells: Cell[]): Cell | null {

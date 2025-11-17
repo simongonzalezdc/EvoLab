@@ -16,6 +16,13 @@ export enum EventType {
   PREDATOR_INVASION = 'predator_invasion',
   VOLCANIC_ERUPTION = 'volcanic_eruption',
   METEOR_SHOWER = 'meteor_shower',
+  // Week 4 new events
+  GENETIC_WINDFALL = 'genetic_windfall',
+  ABUNDANCE = 'abundance',
+  PREDATOR_FRENZY = 'predator_frenzy',
+  GROWTH_SPURT = 'growth_spurt',
+  PLAGUE = 'plague',
+  CLARITY = 'clarity',
 }
 
 export interface GameEvent {
@@ -250,6 +257,88 @@ export class EventManager {
           effects: [
             { type: 'damage', target: 'all', value: 8 },
             { type: 'resource_spawn', target: 'all', value: 12 },
+          ],
+        };
+
+      case EventType.GENETIC_WINDFALL:
+        return {
+          type,
+          name: '🧬 Genetic Windfall!',
+          description: 'A surge of beneficial mutations grants everyone extra DNA points.',
+          duration: 5,
+          severity: 0.2,
+          effects: [
+            { type: 'stat_boost', target: 'all', value: 10, stat: 'dnaPoints' },
+          ],
+        };
+
+      case EventType.ABUNDANCE:
+        return {
+          type,
+          name: '🌸 Abundance!',
+          description: 'The lake blooms with life - resources are plentiful and organisms thrive.',
+          duration: 60,
+          severity: 0.1,
+          effects: [
+            { type: 'resource_spawn', target: 'all', value: 30 },
+            { type: 'heal', target: 'all', value: 10 },
+            { type: 'stat_boost', target: 'all', value: 10, stat: 'maxATP' },
+          ],
+        };
+
+      case EventType.PREDATOR_FRENZY:
+        return {
+          type,
+          name: '🩸 Predator Frenzy!',
+          description: 'Carnivores enter a feeding frenzy, becoming more aggressive and dangerous.',
+          duration: 45,
+          severity: 0.8,
+          effects: [
+            { type: 'stat_boost', target: 'carnivore', value: 3, stat: 'speed' },
+            { type: 'stat_boost', target: 'carnivore', value: 2, stat: 'aggression' },
+            { type: 'damage', target: 'herbivore', value: 20 },
+          ],
+        };
+
+      case EventType.GROWTH_SPURT:
+        return {
+          type,
+          name: '📈 Growth Spurt!',
+          description: 'All organisms experience rapid growth and increased vitality.',
+          duration: 30,
+          severity: 0.3,
+          effects: [
+            { type: 'stat_boost', target: 'all', value: 1, stat: 'size' },
+            { type: 'stat_boost', target: 'all', value: 15, stat: 'maxHealth' },
+            { type: 'heal', target: 'all', value: 20 },
+          ],
+        };
+
+      case EventType.PLAGUE:
+        return {
+          type,
+          name: '☠️ Plague!',
+          description: 'A deadly plague sweeps through the lake, weakening all life forms.',
+          duration: 50,
+          severity: 0.9,
+          effects: [
+            { type: 'damage', target: 'all', value: 1 }, // DoT effect
+            { type: 'stat_debuff', target: 'all', value: -2, stat: 'maxHealth' },
+            { type: 'stat_debuff', target: 'all', value: -1, stat: 'speed' },
+            { type: 'stat_debuff', target: 'all', value: -1, stat: 'armor' },
+          ],
+        };
+
+      case EventType.CLARITY:
+        return {
+          type,
+          name: '✨ Clarity!',
+          description: 'The water becomes crystal clear, enhancing vision and awareness for all.',
+          duration: 40,
+          severity: 0.2,
+          effects: [
+            { type: 'stat_boost', target: 'all', value: 200, stat: 'visionRange' },
+            { type: 'stat_boost', target: 'all', value: 5, stat: 'dnaPoints' },
           ],
         };
 
