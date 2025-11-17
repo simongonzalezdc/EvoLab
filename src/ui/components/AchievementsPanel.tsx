@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import FocusLock from 'react-focus-lock';
 import type { Achievement, Challenge } from '../../achievements/AchievementSystem';
 import { AchievementCategory } from '../../achievements/AchievementSystem';
 
@@ -15,6 +16,19 @@ export const AchievementsPanel: React.FC<AchievementsPanelProps> = ({
 }) => {
   const [selectedTab, setSelectedTab] = useState<'achievements' | 'challenges'>('achievements');
   const [selectedCategory, setSelectedCategory] = useState<AchievementCategory | 'all'>('all');
+
+  // Handle ESC key to close
+  React.useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
 
   const categories: (AchievementCategory | 'all')[] = [
     'all',
@@ -69,6 +83,9 @@ export const AchievementsPanel: React.FC<AchievementsPanelProps> = ({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="achievements-title"
       style={{
         position: 'fixed',
         top: 0,
@@ -83,26 +100,28 @@ export const AchievementsPanel: React.FC<AchievementsPanelProps> = ({
       }}
       onClick={onClose}
     >
-      <div
-        style={{
-          background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-          border: '2px solid #60a5fa',
-          borderRadius: '16px',
-          padding: '30px',
-          maxWidth: '900px',
-          width: '90%',
-          maxHeight: '85vh',
-          overflowY: 'auto',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div style={{ marginBottom: '20px' }}>
-          <h2
-            style={{
-              margin: '0 0 10px 0',
-              color: '#fff',
+      <FocusLock returnFocus>
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+            border: '2px solid #60a5fa',
+            borderRadius: '16px',
+            padding: '30px',
+            maxWidth: '900px',
+            width: '90%',
+            maxHeight: '85vh',
+            overflowY: 'auto',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div style={{ marginBottom: '20px' }}>
+            <h2
+              id="achievements-title"
+              style={{
+                margin: '0 0 10px 0',
+                color: '#fff',
               fontSize: '28px',
               fontWeight: 'bold',
             }}
@@ -422,7 +441,8 @@ export const AchievementsPanel: React.FC<AchievementsPanelProps> = ({
         >
           Close
         </button>
-      </div>
+        </div>
+      </FocusLock>
     </div>
   );
 };

@@ -19,7 +19,7 @@ import { BiomeLegend } from './components/BiomeLegend';
 import { ZoomControls } from './components/ZoomControls';
 import { MusicDevTools } from './components/MusicDevTools';
 import { GameSetupPanel } from './components/GameSetupPanel';
-import { DNAProgressBar } from './components/DNAProgressBar';
+import { KeyboardShortcutsPanel } from './components/KeyboardShortcutsPanel';
 import type { Traits, Species } from '../types/entities';
 import type { TimeControl } from '../core/TimeControl';
 import type { SaveSystem, GameSettings, SavedSimulation, SavedCreature } from '../data/SaveSystem';
@@ -27,6 +27,8 @@ import type { PopulationDataPoint, LineageNode } from '../data/HistoryTracker';
 import type { Achievement, Challenge } from '../achievements/AchievementSystem';
 import { Config } from '../core/Config';
 import type { GameSetupOptions, SpeciesSetupOption } from '../types/game';
+import { accessibilityManager } from '../utils/AccessibilityManager';
+import { screenReaderAnnouncer } from '../utils/ScreenReaderAnnouncer';
 
 const createSpeciesSetup = (type: SpeciesSetupOption['type'], population: number): SpeciesSetupOption => ({
   id: `${type}-${Math.random().toString(36).slice(2)}`,
@@ -81,6 +83,7 @@ interface UIState {
   showBiomeLegend: boolean;
   showMusicDevTools: boolean;
   showGameSetup: boolean;
+  showKeyboardShortcuts: boolean;
   deathCause: 'atp' | 'health';
   currentTraits: Traits | null;
   physicsEnabled: boolean;
@@ -159,6 +162,7 @@ export class UIController {
         showBiomeLegend: true, // Default: visible
         showMusicDevTools: false,
         showGameSetup: !hasSeenSetup(),
+        showKeyboardShortcuts: false,
         deathCause: 'atp',
         currentTraits: null,
         physicsEnabled: false,
@@ -192,8 +196,25 @@ export class UIController {
         this.saveSystem.loadSettings().then(settings => {
           if (settings) {
             setState(s => ({ ...s, settings }));
+            // Apply accessibility settings
+            accessibilityManager.applySettings(settings);
+          } else {
+            // Apply default accessibility settings
+            const defaultSettings = this.saveSystem.getDefaultSettings();
+            accessibilityManager.applySettings(defaultSettings);
           }
         });
+
+        // Global keyboard handler for Shift+?
+        const handleGlobalKeyPress = (e: KeyboardEvent) => {
+          if (e.shiftKey && e.key === '?') {
+            e.preventDefault();
+            setState(s => ({ ...s, showKeyboardShortcuts: !s.showKeyboardShortcuts }));
+          }
+        };
+
+        document.addEventListener('keydown', handleGlobalKeyPress);
+        return () => document.removeEventListener('keydown', handleGlobalKeyPress);
       }, []);
 
       const handleApplyModifications = (mods: Partial<Traits>) => {
@@ -269,6 +290,8 @@ export class UIController {
         setState(s => ({ ...s, settings }));
         this.saveSystem.saveSettings(settings);
         this.onSettingsChange?.(settings);
+        // Apply accessibility settings immediately
+        accessibilityManager.applySettings(settings);
       };
 
       const handleExportHistory = () => {
@@ -310,7 +333,8 @@ export class UIController {
       return (
         <>
           {/* Main Menu */}
-          <MainMenu
+          <nav id="main-menu" aria-label="Main navigation">
+            <MainMenu
             onNewGame={handleNewGame}
             onLoadGame={() => setState(s => ({ ...s, showSaveLoad: true }))}
             onSettings={() => setState(s => ({ ...s, showSettings: true }))}
@@ -327,6 +351,7 @@ export class UIController {
             autoMode={this.getAutoModeState?.() || false}
             showStats={state.showStats}
           />
+          </nav>
 
           {/* Time Control Panel */}
           <TimeControlPanel timeControl={this.timeControl} />
@@ -477,6 +502,13 @@ export class UIController {
             />
           )}
 
+          {/* Keyboard Shortcuts Panel */}
+          {state.showKeyboardShortcuts && (
+            <KeyboardShortcutsPanel
+              onClose={() => setState(s => ({ ...s, showKeyboardShortcuts: false }))}
+            />
+          )}
+
           {/* Achievement Notifications */}
           {state.achievementNotifications.map((achievement, index) => (
             <AchievementNotification
@@ -505,6 +537,11 @@ export class UIController {
       showTraitEditor: false,
       ...data,
     }));
+
+    // Announce to screen readers
+    screenReaderAnnouncer.announcePolite(
+      `Generation ${data.generation - 1} complete! Earned ${data.dnaPointsEarned} DNA points. ${data.mutations.length} mutations discovered.`
+    );
   }
 
   showTraitEditor(traits: Traits, generation: number, availableDNA: number) {
@@ -516,6 +553,11 @@ export class UIController {
       generation,
       availableDNA,
     }));
+
+    // Announce to screen readers
+    screenReaderAnnouncer.announcePolite(
+      `Trait editor opened. Generation ${generation}. You have ${availableDNA} DNA points available.`
+    );
   }
 
   hideTraitEditor() {
@@ -581,6 +623,12 @@ export class UIController {
       resourcesCollected,
       deathCause: cause,
     }));
+
+    // Announce to screen readers (assertive for critical event)
+    const causeText = cause === 'atp' ? 'energy depletion' : 'health loss';
+    screenReaderAnnouncer.announceAssertive(
+      `Extinction! Your species died from ${causeText}. Generation ${generation} reached. Survival time: ${survivalTime} seconds.`
+    );
   }
 
   setRestartCallback(callback: () => void) {
@@ -605,6 +653,11 @@ export class UIController {
       ...s,
       achievementNotifications: [...s.achievementNotifications, achievement],
     }));
+
+    // Announce to screen readers
+    screenReaderAnnouncer.announcePolite(
+      `Achievement unlocked: ${achievement.name}! ${achievement.description}`
+    );
   }
 
   // Evolution systems callbacks

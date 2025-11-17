@@ -1,6 +1,7 @@
 // Music Developer Tools Component - Live parameter controls for music system
 
 import React, { useState, useEffect } from 'react';
+import FocusLock from 'react-focus-lock';
 
 interface MusicDevToolsProps {
   musicManager: any; // MusicManager instance
@@ -20,6 +21,19 @@ export const MusicDevTools: React.FC<MusicDevToolsProps> = ({
   const [muteMelody, setMuteMelody] = useState(false);
   const [muteRhythm, setMuteRhythm] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState(0);
+
+  // Handle ESC key to close
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose?.();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
 
   useEffect(() => {
     // Apply initial values
@@ -64,6 +78,9 @@ export const MusicDevTools: React.FC<MusicDevToolsProps> = ({
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="musicdevtools-title"
       style={{
         position: 'fixed',
         top: '50%',
@@ -82,8 +99,9 @@ export const MusicDevTools: React.FC<MusicDevToolsProps> = ({
         color: 'white',
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2 style={{ margin: 0, color: '#4caf50' }}>🎵 Music Dev Tools</h2>
+      <FocusLock returnFocus>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h2 id="musicdevtools-title" style={{ margin: 0, color: '#4caf50' }}>🎵 Music Dev Tools</h2>
         {onClose && (
           <button
             onClick={onClose}
@@ -243,6 +261,7 @@ export const MusicDevTools: React.FC<MusicDevToolsProps> = ({
           </label>
         </div>
       </div>
+      </FocusLock>
     </div>
   );
 };
