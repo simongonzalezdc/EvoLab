@@ -370,7 +370,7 @@ export class MusicManager {
         logger.log('MusicManager: Audio initialized successfully');
       }
     } catch (error) {
-      console.warn('MusicManager: Audio initialization failed (will retry on user interaction):', error);
+      console.error('MusicManager: Audio initialization failed (will retry on user interaction):', error);
       // Don't throw - allow game to continue without audio
       this.isInitialized = false;
     }
