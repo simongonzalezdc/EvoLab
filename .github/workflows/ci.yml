@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
 
     steps:
     - name: Checkout code
@@ -47,7 +47,7 @@ jobs:
         retention-days: 7
 
   lint-report:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     if: github.event_name == 'pull_request'
 
     steps:
