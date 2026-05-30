@@ -5,6 +5,7 @@ import { Cell } from '../entities/Cell';
 import { Resource } from '../entities/Resource';
 import { BiomeGenerator, BiomeData } from '../environment/BiomeGenerator';
 import { Config } from './Config';
+import { logger } from '../utils/Logger';
 
 interface Vector2D {
   x: number;
@@ -339,4 +340,3 @@ export class AutoPilot {
     }
   }
 }
-

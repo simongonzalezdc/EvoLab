@@ -7,7 +7,9 @@ export type SoundEffect =
   | 'combo'            // Combo achievement
   | 'levelup'          // Evolution/level up
   | 'danger'           // Predator nearby
+  | 'damage'           // Compatibility alias for damage/threat feedback
   | 'death'            // Cell death
+  | 'pickup'           // Compatibility alias for resource pickup feedback
   | 'victory'          // Achievement unlocked
   | 'transition'       // Biome transition
   | 'warning';         // Low ATP warning
@@ -43,7 +45,6 @@ export class SoundManager {
     }).toDestination();
 
     this.metalSynth = new Tone.MetalSynth({
-      frequency: 200,
       envelope: {
         attack: 0.001,
         decay: 0.1,
@@ -122,6 +123,14 @@ export class SoundManager {
         // Low growl/rumble for danger
         this.synth.triggerAttackRelease(['C2', 'F2'], '4n', now, intensity * 0.8);
         this.noiseSynth.triggerAttackRelease('8n', now);
+        break;
+
+      case 'damage':
+        this.play('danger', intensity);
+        break;
+
+      case 'pickup':
+        this.play('collect', intensity);
         break;
 
       case 'death': {

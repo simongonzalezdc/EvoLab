@@ -5,6 +5,9 @@
 
 import { SoundManager } from './SoundManager';
 
+type Direction = 'left' | 'right' | 'front' | 'back';
+type ResourceType = 'glucose' | 'amino' | 'phosphate';
+
 export interface AudioCueConfig {
   enabled: boolean;
   volume: number; // 0-1
@@ -78,7 +81,7 @@ export class SpatialAudioCues {
    * Play threat proximity cue
    * Higher pitch = closer threat
    */
-  public playThreatCue(distance: number, direction: 'left' | 'right' | 'front' | 'back'): void {
+  public playThreatCue(distance: number, direction: Direction): void {
     if (!this.config.enabled || !this.soundManager) return;
 
     const now = Date.now();
@@ -99,8 +102,8 @@ export class SpatialAudioCues {
    */
   public playResourceCue(
     distance: number,
-    resourceType: 'glucose' | 'amino' | 'phosphate',
-    direction: 'left' | 'right' | 'front' | 'back'
+    resourceType: ResourceType,
+    direction: Direction
   ): void {
     if (!this.config.enabled || !this.soundManager) return;
 
@@ -175,14 +178,14 @@ export class SpatialAudioCues {
     playerX: number,
     playerY: number,
     nearbyThreats: Array<{ x: number; y: number; size: number }>,
-    nearbyResources: Array<{ x: number; y: number; type: 'glucose' | 'amino' | 'phosphate' }>,
+    nearbyResources: Array<{ x: number; y: number; type: ResourceType }>,
     worldBounds: { minX: number; maxX: number; minY: number; maxY: number }
   ): void {
     if (!this.config.enabled) return;
 
     // Find closest threat
-    let closestThreat: { distance: number; direction: 'left' | 'right' | 'front' | 'back' } | null = null;
-    nearbyThreats.forEach(threat => {
+    let closestThreat: { distance: number; direction: Direction } | null = null;
+    for (const threat of nearbyThreats) {
       const dx = threat.x - playerX;
       const dy = threat.y - playerY;
       const distance = Math.sqrt(dx * dx + dy * dy);
@@ -190,7 +193,7 @@ export class SpatialAudioCues {
       if (!closestThreat || distance < closestThreat.distance) {
         // Determine direction
         const angle = Math.atan2(dy, dx);
-        let direction: 'left' | 'right' | 'front' | 'back';
+        let direction: Direction;
         if (Math.abs(angle) < Math.PI / 4) direction = 'right';
         else if (Math.abs(angle) > (3 * Math.PI) / 4) direction = 'left';
         else if (angle > 0) direction = 'back';
@@ -198,7 +201,7 @@ export class SpatialAudioCues {
 
         closestThreat = { distance, direction };
       }
-    });
+    }
 
     if (closestThreat) {
       this.playThreatCue(closestThreat.distance, closestThreat.direction);
@@ -207,17 +210,17 @@ export class SpatialAudioCues {
     // Find closest resource
     let closestResource: {
       distance: number;
-      direction: 'left' | 'right' | 'front' | 'back';
-      type: 'glucose' | 'amino' | 'phosphate';
+      direction: Direction;
+      type: ResourceType;
     } | null = null;
-    nearbyResources.forEach(resource => {
+    for (const resource of nearbyResources) {
       const dx = resource.x - playerX;
       const dy = resource.y - playerY;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
       if (!closestResource || distance < closestResource.distance) {
         const angle = Math.atan2(dy, dx);
-        let direction: 'left' | 'right' | 'front' | 'back';
+        let direction: Direction;
         if (Math.abs(angle) < Math.PI / 4) direction = 'right';
         else if (Math.abs(angle) > (3 * Math.PI) / 4) direction = 'left';
         else if (angle > 0) direction = 'back';
@@ -225,7 +228,7 @@ export class SpatialAudioCues {
 
         closestResource = { distance, direction, type: resource.type };
       }
-    });
+    }
 
     if (closestResource) {
       this.playResourceCue(closestResource.distance, closestResource.type, closestResource.direction);

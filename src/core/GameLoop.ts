@@ -12,7 +12,7 @@ import type { Traits } from '../types/entities';
 import type { GameSettings, SavedSimulation, SavedCreature } from '../data/SaveSystem';
 import type { GameSetupOptions } from '../types/game';
 
-import { BiomeGenerator } from '../environment/BiomeGenerator';
+import { BiomeGenerator, BiomeType } from '../environment/BiomeGenerator';
 import { BiomeRenderer } from '../rendering/BiomeRenderer';
 import { DayNightCycle } from '../environment/DayNightCycle';
 import { EnvironmentalEffects } from '../rendering/EnvironmentalEffects';
@@ -814,7 +814,7 @@ export class GameLoop {
         nearbyThreats: Math.floor(combatIntensity * 10), // Approximate threat count
         combatIntensity: combatLevel,
         timeOfDay: this.dayNightCycle.getTimeOfDay(),
-        temperature: currentBiome.type === 'volcanic' ? 'hot' : currentBiome.type === 'arctic' ? 'cold' : 'normal',
+        temperature: currentBiome.type === BiomeType.VOLCANIC ? 'hot' : currentBiome.type === BiomeType.FROZEN ? 'cold' : 'normal',
         hazards: currentBiome.hazards.map((h: any) => `${h.type} (intensity: ${Math.round(h.intensity * 100)}%)`),
         survivalTime: speciesStats.averageSurvivalTime,
         diversity: speciesStats.diversity || 0,

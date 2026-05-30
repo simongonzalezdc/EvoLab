@@ -228,7 +228,7 @@ export const AccessibleGameStatePanel: React.FC<AccessibleGameStatePanelProps> =
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .accessible-game-state-panel {
           position: fixed;
           top: 60px;
