@@ -62,7 +62,7 @@ jobs:
       continue-on-error: true
 
     - name: Annotate code with lint results
-      uses: ataylorme/eslint-annotate-action@5f4dc2e3af8d3c21b727edb597e5503510b1dc9c
+      uses: ataylorme/eslint-annotate-action@d57a1193d4c59cbfbf3f86c271f42612f9dbd9e9
       if: always()
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
