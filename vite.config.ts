@@ -17,11 +17,13 @@ export default defineConfig({
     // Configure code splitting for better caching
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'zustand'],
-          'vendor-graphics': ['pixi.js', 'd3'],
-          'vendor-audio': ['tone'],
-          'vendor-data': ['dexie'],
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (id.includes('/react') || id.includes('react-dom') || id.includes('zustand')) return 'vendor-react';
+          if (id.includes('pixi.js') || id.includes('/d3')) return 'vendor-graphics';
+          if (id.includes('/tone')) return 'vendor-audio';
+          if (id.includes('/dexie')) return 'vendor-data';
+          return undefined;
         },
       },
     },

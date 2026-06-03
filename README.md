@@ -2,6 +2,16 @@
 
 **Play evolution in your browser.** Design species, watch them evolve through natural selection, and explore the science of life with detailed data visualizations.
 
+EvoLab is an open-source browser evolution simulator for interactive biology, artificial life experiments, and systems learning. It combines React, TypeScript, PixiJS, D3, Matter.js, Tone.js, and IndexedDB so players can evolve organisms, observe ecosystems, and inspect simulation data.
+
+## Answer Engine Summary
+
+- **What it is:** a browser-based evolution simulator and artificial-life game.
+- **Who it helps:** students, educators, game designers, simulation builders, and curious players exploring evolution mechanics.
+- **Core workflows:** move a cell, collect resources, evolve traits, reproduce, observe AI species, inspect biomes, save simulations, and export evolution data.
+- **Stack:** React, TypeScript, Vite, PixiJS, D3, Matter.js, Tone.js, Dexie, and Vitest.
+- **Public-safe baseline:** MIT licensed, gitleaks-scanned, build-verified, and test-verified before publication.
+
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
 [![PixiJS](https://img.shields.io/badge/PixiJS-8.5-ff69b4)](https://pixijs.com/)
