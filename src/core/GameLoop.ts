@@ -852,8 +852,8 @@ export class GameLoop {
 
   private updateMusic(): void {
     // Get species center or player position for music
-    let position: { x: number; y: number } = { x: Config.PLAYER_START_X, y: Config.PLAYER_START_Y };
-    let generation = 1;
+    let position: { x: number; y: number };
+    let generation: number;
     
     if (this.entityManager.playerSpecies) {
       position = this.entityManager.playerSpecies.getCenterPosition();

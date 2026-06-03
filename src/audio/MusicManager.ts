@@ -587,17 +587,12 @@ export class MusicManager {
       const isDownbeat = beatInMeasure % 4 === 0;
       const isOffbeat = beatInMeasure % 2 === 1;
 
-      // Base activity increases with combat intensity
-      // Increased density for more rhythmic presence
-      let activity = 0.35; // Base 35% (up from 20%)
-
-      if (isDownbeat) {
-        activity = 0.75 + (this.currentState.combatIntensity * 0.2); // 75-95% on downbeats (up from 50-80%)
-      } else if (isOffbeat) {
-        activity = 0.40 + (this.currentState.combatIntensity * 0.3); // 40-70% on offbeats (up from 15-40%)
-      } else {
-        activity = 0.25 + (this.currentState.combatIntensity * 0.25); // 25-50% elsewhere (up from 10-30%)
-      }
+      // Base activity increases with combat intensity.
+      const activity = isDownbeat
+        ? 0.75 + this.currentState.combatIntensity * 0.2 // 75-95% on downbeats
+        : isOffbeat
+          ? 0.40 + this.currentState.combatIntensity * 0.3 // 40-70% on offbeats
+          : 0.25 + this.currentState.combatIntensity * 0.25; // 25-50% elsewhere
 
       // Trigger based on probability, but always quantized to the grid
       if (Math.random() < activity) {

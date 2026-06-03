@@ -1,6 +1,5 @@
 import Dexie, { type Table } from 'dexie';
 import { Genome } from '../genetics/Genome';
-import type { Traits } from '../types/entities';
 import { logger } from '../utils/Logger';
 
 export interface SavedSimulation {
@@ -77,6 +76,16 @@ class EvoLabDatabase extends Dexie {
   }
 }
 
+function formatErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Unknown error';
+}
+
+function createCausedError(message: string, cause: unknown): Error {
+  const error = new Error(message) as Error & { cause?: unknown };
+  error.cause = cause;
+  return error;
+}
+
 export class SaveSystem {
   private db: EvoLabDatabase;
   private autoSaveTimer: number | null = null;
@@ -108,7 +117,7 @@ export class SaveSystem {
       return id;
     } catch (error) {
       logger.error('Failed to save simulation:', error);
-      throw new Error(`Failed to save simulation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw createCausedError(`Failed to save simulation: ${formatErrorMessage(error)}`, error);
     }
   }
 
@@ -117,7 +126,7 @@ export class SaveSystem {
       return await this.db.simulations.get(id);
     } catch (error) {
       logger.error('Failed to load simulation:', error);
-      throw new Error(`Failed to load simulation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw createCausedError(`Failed to load simulation: ${formatErrorMessage(error)}`, error);
     }
   }
 
@@ -126,7 +135,7 @@ export class SaveSystem {
       return await this.db.simulations.orderBy('timestamp').reverse().toArray();
     } catch (error) {
       logger.error('Failed to get simulations:', error);
-      throw new Error(`Failed to get simulations: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw createCausedError(`Failed to get simulations: ${formatErrorMessage(error)}`, error);
     }
   }
 
@@ -135,7 +144,7 @@ export class SaveSystem {
       await this.db.simulations.delete(id);
     } catch (error) {
       logger.error('Failed to delete simulation:', error);
-      throw new Error(`Failed to delete simulation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw createCausedError(`Failed to delete simulation: ${formatErrorMessage(error)}`, error);
     }
   }
 
@@ -152,7 +161,7 @@ export class SaveSystem {
       return id;
     } catch (error) {
       logger.error('Failed to save creature:', error);
-      throw new Error(`Failed to save creature: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw createCausedError(`Failed to save creature: ${formatErrorMessage(error)}`, error);
     }
   }
 
@@ -161,7 +170,7 @@ export class SaveSystem {
       return await this.db.creatures.get(id);
     } catch (error) {
       logger.error('Failed to load creature:', error);
-      throw new Error(`Failed to load creature: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw createCausedError(`Failed to load creature: ${formatErrorMessage(error)}`, error);
     }
   }
 
@@ -170,7 +179,7 @@ export class SaveSystem {
       return await this.db.creatures.orderBy('timestamp').reverse().toArray();
     } catch (error) {
       logger.error('Failed to get creatures:', error);
-      throw new Error(`Failed to get creatures: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw createCausedError(`Failed to get creatures: ${formatErrorMessage(error)}`, error);
     }
   }
 
@@ -179,7 +188,7 @@ export class SaveSystem {
       await this.db.creatures.delete(id);
     } catch (error) {
       logger.error('Failed to delete creature:', error);
-      throw new Error(`Failed to delete creature: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw createCausedError(`Failed to delete creature: ${formatErrorMessage(error)}`, error);
     }
   }
 
@@ -188,7 +197,7 @@ export class SaveSystem {
       await this.db.settings.put({ id: 1, data: settings });
     } catch (error) {
       logger.error('Failed to save settings:', error);
-      throw new Error(`Failed to save settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw createCausedError(`Failed to save settings: ${formatErrorMessage(error)}`, error);
     }
   }
 
@@ -202,7 +211,7 @@ export class SaveSystem {
       return this.migrateSettings(result.data);
     } catch (error) {
       logger.error('Failed to load settings:', error);
-      throw new Error(`Failed to load settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw createCausedError(`Failed to load settings: ${formatErrorMessage(error)}`, error);
     }
   }
 
