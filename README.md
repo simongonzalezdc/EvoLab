@@ -1,353 +1,248 @@
-# 🧬 EvoLab - Evolution Simulator
+# 🧬 EvoLab — Browser-Based Evolution Simulator
 
-**Play evolution in your browser.** Design species, watch them evolve through natural selection, and explore the science of life with detailed data visualizations.
-
-EvoLab is an open-source browser evolution simulator for interactive biology, artificial life experiments, and systems learning. It combines React, TypeScript, PixiJS, D3, Matter.js, Tone.js, and IndexedDB so players can evolve organisms, observe ecosystems, and inspect simulation data.
-
-## Answer Engine Summary
-
-- **What it is:** a browser-based evolution simulator and artificial-life game.
-- **Who it helps:** students, educators, game designers, simulation builders, and curious players exploring evolution mechanics.
-- **Core workflows:** move a cell, collect resources, evolve traits, reproduce, observe AI species, inspect biomes, save simulations, and export evolution data.
-- **Stack:** React, TypeScript, Vite, PixiJS, D3, Matter.js, Tone.js, Dexie, and Vitest.
-- **Public-safe baseline:** MIT licensed, gitleaks-scanned, build-verified, and test-verified before publication.
+**An open-source, browser-based evolution simulator built with TypeScript, React, and PixiJS.** Design species, watch them evolve through natural selection, and explore the science of life with real-time data visualizations.
 
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.0-blue)](https://www.typescriptlang.org/)
 [![PixiJS](https://img.shields.io/badge/PixiJS-8.5-ff69b4)](https://pixijs.com/)
+[![Vite](https://img.shields.io/badge/Vite-8-646cff)](https://vitejs.dev/)
+[![Tests](https://img.shields.io/badge/tests-Vitest-yellow)](https://vitest.dev/)
 
 ---
 
-## ✨ Features
+## What Is This?
 
-### Phase 1 - MVP Foundation ✅
-- 🧬 **Cell Stage Gameplay** - Control a single-celled organism in a procedurally generated lake
-- ⚡ **ATP Energy System** - Manage energy that drains based on size and metabolism
-- 🍬 **Resource Collection** - Collect glucose particles to restore ATP and survive
-- 🎮 **WASD Controls** - Smooth, responsive movement with velocity physics
-- 📊 **Real-time HUD** - Track ATP, health, glucose collected, and position
-- 🌊 **Lake Environment** - Explore a 2000x1500 pixel lake with boundary constraints
+EvoLab is an **artificial-life game and evolution simulator** that runs entirely in your browser. You control a single-celled organism in a procedurally generated lake, collect resources, reproduce, and watch your species adapt over generations. Compete against AI-driven herbivores, carnivores, and omnivores across 12 distinct biomes — all rendered with PixiJS and backed by a 55+ trait genetics system.
 
-### Phase 2 - Genetics & Evolution ✅
-- 🧬 **55+ Genetic Traits** - Comprehensive trait system across 7 categories
-  - Energy & Metabolism, Physical Stats, Senses, Behavioral, Special Abilities, Resource Collection, Environmental Adaptation
-- 🔬 **Reproduction System** - Meet requirements (70% ATP, compounds, maturity) to evolve
-- 🎨 **Trait Editor UI** - Interactive React interface for directed evolution
-  - Spend DNA points (earned from survival) to modify traits
-  - Max ±2 points per generation per trait
-  - Real-time cost calculation and visual feedback
-- 🧪 **Genetic Mutations** - Automatic mutations with beneficial bias (15% rate, ±15% magnitude)
-- 📈 **Generation Tracking** - Lineage history, mutation changelog, DNA point accumulation
-- 🎯 **Trait Interconnections** - Size affects speed, armor reduces mobility, intelligence boosts senses
-- 📊 **Generation Reports** - Post-reproduction summary with stats and mutations
+**Who it's for:** biology students, educators, game designers, simulation enthusiasts, and anyone curious about how evolution works.
 
-### Phase 3 - AI & Environment ✅
-- 🌍 **Procedural Biome Generation** - 12 distinct zones using Perlin noise
-  - Original 7: Shallow Warm, Shallow Cold, Deep Warm, Deep Cold, Toxic, Nutrient Rich, Barren
-  - New 5: Volcanic, Frozen, Swamp, Crystal, Abyss
-  - Dynamic properties: temperature, depth, nutrients, toxicity, light, pH, pressure
-  - Environmental hazards: currents, temperature damage, oxygen depletion, radiation, pressure
-- 🤖 **3 AI Species** - Competing organisms with advanced behaviors
-  - **Herbivores** (green): Small, fast, flee from predators, seek resources
-  - **Carnivores** (red): Medium, aggressive, hunt in packs, territorial behavior
-  - **Omnivores** (orange): Balanced, opportunistic, attack weak prey or gather resources
-  - **Pack Behavior**: Coordinated hunting, pack leaders, cohesion mechanics
-  - **Learning AI**: Adapts to player strategies, tracks successful tactics
-- ⚔️ **Combat System** - Predator-prey interactions with damage, armor, toxins
-- 👥 **Population Management** - Auto-spawning, lifecycle management, max population caps
-  - 15 Herbivores, 8 Carnivores, 10 Omnivores (max populations)
-- ☀️ **Day/Night Cycle** - 24-hour cycle with 4 time periods (dawn, day, dusk, night)
-  - Dynamic lighting (0.3-1.0), ambient colors, 10x speed by default
-- 🎨 **Visual Biome Rendering** - Tile-based rendering with dynamic visibility
-  - Only renders visible tiles around camera for performance
-  - Lighting effects based on day/night cycle
+**Core loop:** move → collect glucose → manage ATP → reproduce → edit traits → watch generations diverge → inspect data.
 
-### Phase 4 - Data Visualization & Polish ✅
-- 📊 **D3.js Visualizations** - Comprehensive evolution tracking and analytics
-  - **Population Graph**: Track species populations across 100+ generations
-  - **Evolution Tree**: Phylogenetic tree showing lineage relationships
-  - **Trait Radar Chart**: Visual profile of top 10 traits (normalized 0-10 scale)
-  - Interactive tooltips, legends, and real-time data updates
-- ⏱️ **Time Control System** - Full simulation speed control
-  - **Speed Multipliers**: 1x (normal), 10x, 100x, 1000x speed options
-  - **Pause/Resume**: Stop simulation completely for detailed analysis
-  - **Step Mode**: Advance one frame at a time when paused
-- 💾 **Save/Load System** - Complete state persistence with IndexedDB
-  - Save unlimited simulations with full state restoration
-  - Auto-save every 5 minutes (configurable)
-  - Export/import simulations as JSON files
-  - Save favorite creatures for later use
-- 🧬 **Creature Export/Import** - Share and collect evolved organisms
-  - Export creatures as JSON with full genome data
-  - Import creatures from others or previous saves
-  - Creature library management (save, load, delete)
-- 📈 **Data Export** - Evolution history to CSV
-  - Generation-by-generation statistics
-  - Population trends, births, deaths
-  - Compatible with Excel, Google Sheets, data analysis tools
-- ⚙️ **Settings Panel** - Comprehensive customization
-  - Graphics quality (low/medium/high)
-  - Display toggles (biomes, grid, stats)
-  - Audio controls (sound effects, music)
-  - Auto-save configuration
-- 🎓 **Tutorial System** - Interactive 11-step guided tour
-  - Game mechanics, controls, evolution strategies
-  - Biomes, AI species, combat explained
-  - Progress tracking with visual indicators
-  - Skip option for returning players
-- 📊 **Statistics Dashboard** - Real-time evolution analytics
-  - Toggle visibility with button
-  - Integrated population, lineage, and trait displays
-  - Synchronized with simulation state
-- 🎮 **Main Menu** - Quick access to all features
-  - New Game, Load/Save, Settings, Tutorial
-  - Export history, toggle stats display
-  - Fixed position UI with clean modern design
-- 🎵 **Adaptive Procedural Music** - Dynamic soundtrack system
-  - 12 biome-specific soundscapes with unique musical scales
-  - Combat intensity system (music responds to threats)
-  - Day/night cycle integration (tempo and brightness changes)
-  - Multi-layer synthesis (ambient, bass, melody, effects)
-  - Real-time adaptation to game state
-- 🏆 **Achievements & Challenges System** - Track your evolutionary progress
-  - 23 achievements across 6 categories (Survival, Evolution, Combat, Exploration, Traits, Challenges)
-  - Secret hidden achievements to discover
-  - 4 timed challenges with DNA point rewards
-  - Progress tracking and persistence
-  - Beautiful achievement notification popup
-  - Rarity tiers: Common, Uncommon, Rare, Epic, Legendary
-- 🌋 **Expanded Biome System** - 12 unique biomes with environmental hazards
-  - **New Biomes**: Volcanic, Frozen, Swamp, Crystal, Abyss (+ original 7)
-  - **Environmental Hazards**: Ocean currents, temperature extremes, oxygen depletion, radiation, pressure damage
-  - Hazards respond to armor and resistance traits
-  - Unique musical soundscapes for each biome type
-- 🤖 **Advanced AI Behaviors** - Intelligent competing organisms
-  - **Pack Behavior**: Carnivores form hunting packs (2-5 members), coordinated attacks
-  - **Territorial Mechanics**: AI claims and defends resource-rich territories
-  - **Learning System**: AI adapts to player strategies, remembers encounters
-  - **Difficulty Scaling**: AI becomes cautious after repeated losses
-  - Pack leaders coordinate hunts with 20% speed boost
-
-### Phase 5 - Enhanced Simulation ⚠️ (Needs Integration)
-- ⚠️ **Random Events System** - Implemented but requires integration (see INTEGRATION_GUIDE.md)
-  - Asteroid impacts, disease outbreaks, algae blooms, environmental changes
-  - 8-10 event types with player choices and consequences
-  - Event notification UI complete
-- ⚠️ **Atmospheric Composition Tracking** - Code complete, needs GameLoop integration
-  - O2/CO2 tracking based on plant/animal populations
-  - Suffocation mechanics in low-oxygen zones
-  - Real-time atmospheric feedback
-- ⚠️ **Faction/Playstyle System** - Backend ready, UI complete, needs activation
-  - 4 factions with unique goals and bonuses
-  - Victory conditions and progression tracking
-  - Faction selection panel implemented
-- ⚠️ **Ecosystem Feedback Loops** - Population regulator ready, needs wiring
-  - Predator-prey oscillations
-  - Resource depletion effects
-  - Self-stabilizing populations
-
-**Note:** Phase 5 features are fully implemented with comprehensive code but need to be integrated into the main game loop. See `INTEGRATION_GUIDE.md` for step-by-step integration instructions and `COMPREHENSIVE_ANALYSIS.md` for detailed assessment.
+**Tech stack:** React 19 · TypeScript 6 · Vite 8 · PixiJS 8.5 · D3 7 · Matter.js 0.20 · Tone.js 15 · Dexie 4 · Vitest 4
 
 ---
 
-## 🚀 Quick Start
+## Features
+
+### 🌱 Phase 1 — MVP Foundation
+
+- **Cell Stage Gameplay** — Control a single-celled organism in a 2000×1500 pixel lake
+- **ATP Energy System** — Energy drains based on size and metabolism; collect glucose to survive
+- **WASD Controls** — Smooth, velocity-based movement with physics
+- **Real-time HUD** — Track ATP, health, glucose collected, and position
+- **Boundary Constraints** — Lake edges prevent organisms from escaping
+
+### 🧬 Phase 2 — Genetics & Evolution
+
+- **55+ Genetic Traits** across 7 categories: Energy & Metabolism, Physical Stats, Senses, Behavioral, Special Abilities, Resource Collection, Environmental Adaptation
+- **Reproduction System** — Meet requirements (70% ATP, compounds, maturity) to spawn offspring
+- **Trait Editor UI** — Spend DNA points earned from survival to modify traits (max ±2 points per generation)
+- **Genetic Mutations** — Automatic mutations with a 15% rate and ±15% magnitude (beneficial bias)
+- **Trait Interconnections** — Size affects speed, armor reduces mobility, intelligence boosts senses
+- **Generation Tracking** — Lineage history, mutation changelog, DNA point accumulation, post-reproduction reports
+
+### 🌍 Phase 3 — AI & Environment
+
+- **12 Procedural Biomes** via Perlin noise — Shallow Warm, Shallow Cold, Deep Warm, Deep Cold, Toxic, Nutrient Rich, Barren, Volcanic, Frozen, Swamp, Crystal, Abyss
+- **Dynamic Environment** — Temperature, depth, nutrients, toxicity, light, pH, pressure, ocean currents
+- **3 AI Species** with distinct behaviors:
+  - **Herbivores** (green) — small, fast, flee from predators
+  - **Carnivores** (red) — aggressive, hunt in packs with coordinated attacks
+  - **Omnivores** (orange) — opportunistic, attack weak prey or gather resources
+- **Learning AI** — Adapts to player strategies, tracks successful tactics
+- **Combat System** — Predator-prey interactions with damage, armor, and toxins
+- **Day/Night Cycle** — 24-hour cycle with 4 time periods and dynamic lighting
+- **Population Management** — Auto-spawning, lifecycle management, configurable caps
+
+### 📊 Phase 4 — Data Visualization & Polish
+
+- **D3.js Visualizations** — Population graph (100+ generations), phylogenetic evolution tree, trait radar chart
+- **Time Control** — 1×, 10×, 100×, 1000× speed; pause; step mode for frame-by-frame analysis
+- **Save/Load System** — IndexedDB persistence, auto-save every 5 minutes, JSON export/import
+- **Creature Export/Import** — Share evolved organisms as JSON with full genome data
+- **CSV Data Export** — Generation statistics, population trends (Excel/Sheets compatible)
+- **Settings Panel** — Graphics quality, display toggles, audio controls, auto-save configuration
+- **Tutorial System** — 11-step interactive guide covering mechanics, controls, and strategies
+- **Adaptive Music** — 12 biome-specific soundscapes, combat intensity response, day/night integration
+- **Achievements** — 23 achievements across 6 categories with rarity tiers and secret unlocks
+- **Timed Challenges** — 4 challenges with DNA point rewards
+
+---
+
+## Installation
 
 ### Prerequisites
 
-- Node.js 18+ or npm/pnpm
+- [Node.js](https://nodejs.org/) v26 or later
+- [npm](https://www.npmjs.com/) (included with Node.js)
 
-### Installation
+### Clone and Install
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/evolab.git
-cd evolab
-
-# Install dependencies
+git clone https://github.com/simon/EvoLab.git
+cd EvoLab
 npm install
-
-# Start dev server
-npm run dev
-```
-
-Open http://localhost:5173 and start evolving!
-
----
-
-## 🎮 Controls
-
-| Key / UI | Action |
-|----------|--------|
-| `W` `A` `S` `D` or Arrow Keys | Move cell |
-| **Time Control Panel** (bottom center) | |
-| ⏸ Pause / ▶ Resume | Pause/resume simulation |
-| ⏭ Step | Advance one frame (when paused) |
-| **1x / 10x / 100x / 1000x** | Simulation speed multipliers |
-| **Main Menu** (top right) | |
-| 📊 Show/Hide Stats | Toggle statistics dashboard |
-| 🎮 New Game | Reset simulation |
-| 💾 Load/Save | Open save/load panel |
-| 📥 Export Data | Download evolution history (CSV) |
-| ⚙️ Settings | Open settings panel |
-| ❓ Tutorial | Launch interactive tutorial |
-
-**Objective:** Survive, collect resources, and evolve through generations. Track your progress with real-time visualizations!
-
----
-
-## 📁 Project Structure
-
-```
-evolab/
-├── src/
-│   ├── core/           # Core game systems
-│   │   ├── Config.ts   # Game configuration
-│   │   ├── GameLoop.ts # Main game loop
-│   │   └── InputHandler.ts
-│   ├── rendering/      # PixiJS rendering
-│   │   └── PixiApp.ts
-│   ├── entities/       # Game entities
-│   │   ├── Cell.ts     # Cell entity
-│   │   ├── Resource.ts # Resource particles
-│   │   └── EntityManager.ts
-│   ├── types/          # TypeScript definitions
-│   └── main.ts         # Entry point
-├── public/             # Static assets
-├── Dev Docs/           # Comprehensive documentation
-└── index.html          # HTML entry point
 ```
 
 ---
 
-## 🛠️ Development
+## Quick Start
+
+Start the development server:
 
 ```bash
-# Run dev server
 npm run dev
+```
 
-# Type check
-npm run type-check
+Open your browser to the URL shown in the terminal (typically `http://localhost:5173`). You'll see the main menu — select **New Game** to begin.
 
-# Build for production
-npm run build
+### Other Commands
 
-# Preview production build
-npm run preview
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start Vite dev server with HMR |
+| `npm run build` | Type-check and build for production |
+| `npm run preview` | Preview the production build locally |
+| `npm test` | Run tests with Vitest |
+| `npm run lint` | Lint TypeScript with ESLint |
+| `npm run format` | Format source with Prettier |
+| `npm run type-check` | Run TypeScript compiler without emitting |
 
-# Format code
-npm run format
+---
 
-# Lint code
-npm run lint
+## Usage
+
+### Controls
+
+| Key | Action |
+|-----|--------|
+| **W / A / S / D** | Move your organism |
+| **Space** | Reproduce (when requirements are met) |
+| **T** | Open Trait Editor |
+| **Escape** | Pause / Open Menu |
+| **1 / 2 / 3 / 4** | Set simulation speed (1× / 10× / 100× / 1000×) |
+
+### Playing the Game
+
+1. **Survive** — Move around the lake and collect glowing glucose particles to maintain ATP.
+2. **Grow** — As you collect resources, your organism gains mass and earns DNA points.
+3. **Reproduce** — Once you meet reproduction requirements (70% ATP, required compounds, sufficient maturity), press Space to spawn offspring.
+4. **Evolve** — Use the Trait Editor to spend DNA points on traits before reproducing. Traits carry over to the next generation with possible mutations.
+5. **Compete** — AI species share the lake. Carnivores will hunt you; herbivores compete for resources.
+6. **Analyze** — Open the Statistics Dashboard to view population graphs, evolution trees, and trait radar charts. Export data to CSV for deeper analysis.
+
+### Saving Your Progress
+
+- Saves are stored automatically in your browser via IndexedDB (every 5 minutes by default).
+- Access **Save/Load** from the main menu to manage save slots.
+- **Export** a simulation as JSON to share or back up.
+
+---
+
+## Project Structure
+
+```
+EvoLab/
+├── src/
+│   ├── main.ts              # Entry point
+│   ├── core/                # Simulation engine, game loop, state management
+│   ├── entities/            # Organism, AI species, resources
+│   ├── genetics/            # Trait system, mutations, reproduction
+│   ├── physics/             # Matter.js integration, collision detection
+│   ├── rendering/           # PixiJS rendering, biome tiles, effects
+│   ├── environment/         # Biome generation, day/night cycle, hazards
+│   ├── ai/                  # AI behaviors, pack mechanics, learning
+│   ├── ui/                  # React components (HUD, menus, trait editor)
+│   ├── audio/               # Tone.js procedural music system
+│   ├── achievements/        # Achievement tracking and notifications
+│   ├── data/                # Constants, biome definitions, trait configs
+│   ├── events/              # Event system for decoupled communication
+│   ├── types/               # TypeScript type definitions
+│   └── utils/               # Shared utilities
+├── tests/                   # Vitest test suites
+├── docs/                    # Agent law and additional documentation
+├── Dev Docs/                # Product specs, roadmap, technical docs
+├── vite.config.ts           # Vite configuration
+├── vitest.config.ts         # Test configuration
+├── tsconfig.json            # TypeScript configuration
+└── eslint.config.js         # ESLint configuration
 ```
 
 ---
 
-## 📚 Documentation
+## FAQ
 
-See the [Dev Docs](Dev%20Docs/) directory for comprehensive documentation:
+### Does EvoLab work on mobile?
 
-- **01-executive-summary.md** - Project overview and vision
-- **02-technical-specification.md** - Complete technical guide
-- **03-product-requirements.md** - Feature specifications
-- **04-roadmap.md** - Development timeline (16-week MVP)
-- **05-monetization-audit.md** - Revenue strategy (open core + SaaS)
-- **06-launch-checklist.md** - Launch preparation guide
+EvoLab is designed for desktop browsers with keyboard controls. Mobile support is not currently implemented.
 
----
+### Which browsers are supported?
 
-## 🔮 Roadmap
+Any modern browser with WebGL2 support: Chrome, Firefox, Safari, and Edge (latest versions).
 
-### Phase 1 - Foundation ✅
-- ✅ Basic cell movement and controls
-- ✅ ATP energy system
-- ✅ Resource collection (glucose)
-- ✅ Real-time HUD
+### How do I reset the simulation?
 
-### Phase 2 - Genetics & Evolution ✅
-- ✅ 55+ trait system (speed, size, armor, metabolism, intelligence, etc.)
-- ✅ Genetic algorithm with mutations (15% rate, beneficial bias)
-- ✅ Reproduction system (ATP, compound, maturity requirements)
-- ✅ Trait editor UI (React, interactive sliders, DNA point system)
-- ✅ Generation tracking and lineage history
-- ✅ Compound collection (glucose, amino acids, phosphates)
+From the main menu, select **New Game** to start fresh. Existing saves are preserved unless you overwrite them.
 
-### Phase 3 - AI & Environment ✅
-- ✅ AI-controlled competing species (Herbivore, Carnivore, Omnivore)
-- ✅ Procedural biome generation (7 distinct zones with Perlin noise)
-- ✅ Day/night cycle (configurable speed, lighting effects)
-- ✅ Population dynamics (auto-spawning, max population limits)
-- ✅ Combat system (predator-prey interactions, damage calculation)
-- ✅ Biome-based environment (temperature, depth, nutrients, toxicity, pH)
+### Can I contribute a new biome or trait?
 
-### Phase 4 - Data Visualization & Polish ✅
-- ✅ D3.js charts (population graph, evolution tree, trait radar chart)
-- ✅ Time controls (1x, 10x, 100x, 1000x speed + pause/step)
-- ✅ Save/load system (IndexedDB with auto-save)
-- ✅ Creature export/import (JSON format)
-- ✅ Evolution history export (CSV format)
-- ✅ Settings panel (graphics, display, audio, auto-save)
-- ✅ Interactive tutorial system (11 steps)
-- ✅ Main menu and statistics dashboard
+Yes. Biome definitions live in `src/data/` and traits are configured in `src/genetics/`. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-### Future Enhancements
-- 🔜 Multiplayer mode (compete with other players)
-- 🔜 Mobile/touch controls support
-- 🔜 Advanced evolution mechanics (sexual reproduction, speciation)
-- 🔜 More challenge modes and game scenarios
-- 🔜 Community creature sharing platform
+### Where is my save data stored?
+
+Saves are stored in your browser's IndexedDB database. Clearing browser data will remove saves. Use the export feature to back up simulations as JSON files.
 
 ---
 
-## 🧪 Tech Stack
+## Contributing
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| Frontend | TypeScript 5.7 + Vite 6 | Type safety, fast HMR |
-| Rendering | PixiJS v8 (WebGL) | GPU-accelerated 2D graphics |
-| UI Framework | React 18 | Interactive trait editor, modals, panels |
-| Data Viz | D3.js 7.9 | Evolution trees, population graphs, radar charts |
-| Database | Dexie.js 4.0 | IndexedDB wrapper for save/load system |
-| State | Zustand 4.5 | Lightweight state management |
-| Audio | Tone.js 15.1 | Adaptive procedural music generation |
-| Physics | Matter.js 0.20 | Realistic movement and collisions (planned)
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
----
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/my-feature`
+3. Install dependencies: `npm install`
+4. Make your changes and add tests
+5. Run checks: `npm run lint && npm test && npm run type-check`
+6. Commit with a descriptive message
+7. Open a pull request against `main`
 
-## 🎓 Educational Use
+### Development Guidelines
 
-EvoLab is designed for biology education (ages 12+):
-
-- Teaches natural selection, genetic inheritance, and adaptation
-- Provides real-time data visualization of evolutionary principles
-- Aligns with NGSS (Next Generation Science Standards)
-- Free and open source - no installation or licenses required
-
-Perfect for classrooms, homeschooling, and curious learners!
+- Write TypeScript with strict mode
+- Add tests for new features in the `tests/` directory
+- Follow the existing code style (enforced by ESLint and Prettier)
+- Keep pull requests focused — one feature or fix per PR
 
 ---
 
-## 🤝 Contributing
+## License
 
-Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines (coming soon).
+EvoLab is released under the [MIT License](LICENSE).
+
+```
+MIT License
+
+Copyright (c) 2025 Simon
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
 
 ---
 
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
-Free for educational and commercial use.
-
----
-
-## 🙏 Acknowledgments
-
-- Inspired by [Spore](https://www.spore.com/) and [Thrive](https://revolutionarygamesstudio.com/)
-- Built with [PixiJS](https://pixijs.com/), [TypeScript](https://www.typescriptlang.org/), and [Vite](https://vite.dev/)
-
----
-
-**Made with ❤️ for science education and open source**
-
-*Last Updated: November 16, 2025 - Phase 4 Complete + Phase 5 Pending Integration*
+Built with 🧬 by the EvoLab community.
