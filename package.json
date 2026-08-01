@@ -19,7 +19,7 @@
     "dexie": "^4.0.8",
     "matter-js": "^0.20.0",
     "pixi.js": "^8.5.2",
-    "react": "^19.2.7",
+    "react": "^19.2.8",
     "react-dom": "^19.2.0",
     "react-focus-lock": "^2.13.7",
     "tone": "^15.1.22",
