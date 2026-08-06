@@ -1,5 +1,7 @@
 # 🧬 EvoLab - Evolution Simulator
 
+**TL;DR:** EvoLab — evolution / experiment lab for product or model work. Best for researchers and builders running evolutionary experiments.
+
 **Play evolution in your browser.** Design species, watch them evolve through natural selection, and explore the science of life with detailed data visualizations.
 
 EvoLab is an open-source browser evolution simulator for interactive biology, artificial life experiments, and systems learning. It combines React, TypeScript, PixiJS, D3, Matter.js, Tone.js, and IndexedDB so players can evolve organisms, observe ecosystems, and inspect simulation data.
@@ -351,3 +353,64 @@ Free for educational and commercial use.
 **Made with ❤️ for science education and open source**
 
 *Last Updated: November 16, 2025 - Phase 4 Complete + Phase 5 Pending Integration*
+
+<!-- s-plus-geo:start -->
+
+## What is EvoLab?
+
+**EvoLab** is a **evolution / experiment lab for product or model work** that helps **researchers and builders running evolutionary experiments** **run structured evolution experiments with clear surfaces**.
+
+| | |
+| --- | --- |
+| **Product** | EvoLab |
+| **Category** | evolution / experiment lab for product or model work |
+| **Best for** | researchers and builders running evolutionary experiments |
+| **Not** | a production training cluster |
+| **Source** | [GitHub](https://github.com/simongonzalezdc/EvoLab) · [Forgejo](https://git.kyanitelabs.tech/simon/EvoLab) |
+| **Keywords** | EvoLab, evolution experiment lab |
+
+## Who it's for
+
+- Primary: researchers and builders running evolutionary experiments
+- Use when you need to run structured evolution experiments with clear surfaces
+- Skip if you need a production training cluster
+
+## FAQ
+
+### What is EvoLab?
+
+EvoLab is a evolution / experiment lab for product or model work. It helps researchers and builders running evolutionary experiments run structured evolution experiments with clear surfaces.
+
+### Who should use EvoLab?
+
+researchers and builders running evolutionary experiments.
+
+### How is EvoLab different?
+
+Lab surface for experiments, not a full MLOps platform.
+
+### Is EvoLab production software?
+
+Treat the README status and release tags as source of truth for maturity. Validate against your own requirements before production use.
+
+## Status
+
+- Maintained as of 2026 on the default branch
+- Prefer release tags when pinning dependencies
+- Report issues on the canonical remote listed above
+
+## Agent surface
+
+- Coding agents: read this README first, then repo docs/`AGENTS.md` if present
+- Prefer machine-readable briefs (`llms.txt`) when the repo ships one
+- MCP or skill entrypoints are documented in-repo when applicable
+
+## Contributing
+
+Issues and PRs welcome on the canonical remote. Keep public docs free of secrets and machine-local paths.
+
+## License
+
+See [LICENSE](LICENSE) in this repository (or package metadata if license is package-only).
+
+<!-- s-plus-geo:end -->
