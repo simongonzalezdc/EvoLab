@@ -1,3 +1,6 @@
+# EvoLab CI — real gates, replaces the former `|| true` scaffold (lint+test
+# could never fail, no build). Gates validated green at f784970 on
+# 2026-10-08: lint (0 errors), type-check, vitest 60/60, build.
 on:
   push:
     branches: [main]
@@ -5,22 +8,24 @@ on:
 jobs:
   test:
     runs-on: docker
-    container:
-      image: node:26-slim
+    env:
+      CI: "true"
     steps:
       - uses: actions/checkout@v4
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Install dependencies
         run: |
           if [ -f package.json ]; then
             npm ci || npm install
           fi
       - name: Lint
-        run: |
-          if [ -f package.json ]; then
-            npx --no eslint . || true
-          fi
-      - name: Test
-        run: |
-          if [ -f package.json ]; then
-            npm test || true
-          fi
+        run: npm run lint
+      - name: Type check
+        run: npm run type-check
+      - name: Unit tests
+        run: npm test
+      - name: Build
+        run: npm run build
