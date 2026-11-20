@@ -1,13 +1,18 @@
-# EvoLab CI — real gates, replaces the former `|| true` scaffold (lint+test
+# EvoLab CI — real gates, replacing the former fake-green scaffold (lint+test
 # could never fail, no build). Gates validated green at f784970 on
 # 2026-10-08: lint (0 errors), type-check, vitest 60/60, build.
+# This copy targets GitHub (ubuntu-latest hosted runners); the .forgejo/
+# copy runs on the org Forgejo (docker runners). Keep both in sync
+# gate-for-gate: lint, type-check, vitest, build.
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 jobs:
   test:
-    runs-on: docker
+    if: github.repository == 'simongonzalezdc/EvoLab'
+    runs-on: ubuntu-latest
     env:
       CI: "true"
     steps:

@@ -1,4 +1,4 @@
-# EvoLab CI — real gates, replaces the former `|| true` scaffold (lint+test
+# EvoLab CI — real gates, replacing the former fake-green scaffold (lint+test
 # could never fail, no build). Gates validated green at f784970 on
 # 2026-10-08: lint (0 errors), type-check, vitest 60/60, build.
 on:

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Open source browser-based evolution simulator",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "scripts": {
     "dev": "vite",
     "dev:audio": "vite --watch src/audio/",
