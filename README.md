@@ -162,7 +162,7 @@ EvoLab is an open-source browser evolution simulator for interactive biology, ar
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/evolab.git
+git clone https://github.com/simongonzalezdc/EvoLab.git
 cd evolab
 
 # Install dependencies
