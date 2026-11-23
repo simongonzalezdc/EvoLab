@@ -1,68 +1,41 @@
-name: CI/CD
+name: CI
 
+# EvoLab's only CI: GitHub is the trunk and the Forgejo copy is a mirror that
+# runs nothing (fleet GIT-CI-STRATEGY-20261123). Real gates (replacing the
+# former fake-green scaffold): lint, type-check, vitest, build.
 on:
   push:
-    branches: [ "main", "claude/**" ]
+    branches: [main]
   pull_request:
-    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   test:
+    if: github.repository == 'simongonzalezdc/EvoLab'
     runs-on: ubuntu-latest
     timeout-minutes: 20
-
+    env:
+      CI: "true"
     steps:
-    - name: Checkout code
-      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
-
-    - name: Setup Node.js
-      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
-      with:
-        node-version: '24'
-        cache: 'npm'
-
-    - name: Install dependencies
-      run: npm ci
-
-    - name: Run linter
-      run: npm run lint
-
-    - name: Run type checking
-      run: npm run type-check
-
-    - name: Run tests
-      run: npx vitest run --reporter=default
-
-    - name: Build project
-      run: npm run build
-
-    - name: Upload build artifacts
-      if: success()
-      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
-      with:
-        name: dist
-        path: dist/
-        retention-days: 7
-
-  lint-report:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    if: github.event_name == 'pull_request'
-
-    steps:
-    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
-    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
-      with:
-        node-version: '24'
-        cache: 'npm'
-    - run: npm ci
-    - name: Run ESLint
-      run: npx eslint . --format json > eslint_report.json
-      continue-on-error: true
-
-    - name: Annotate code with lint results
-      uses: ataylorme/eslint-annotate-action@d57a1193d4c59cbfbf3f86c271f42612f9dbd9e9
-      if: always()
-      with:
-        repo-token: "${{ secrets.GITHUB_TOKEN }}"
-        report-json: "eslint_report.json"
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - name: Setup Node 22
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Type check
+        run: npm run type-check
+      - name: Unit tests
+        run: npm test
+      - name: Build
+        run: npm run build
